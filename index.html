@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador Interactivo - Ordo Magnus</title>
+    <meta name="description" content="Analiza tus partidas de ajedrez con sabiduría táctica y humor caribeño. Stockfish local gratis para siempre.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">O</div>
+            <h1>Analizador Interactivo - Ordo Magnus</h1>
+        </div>
+        <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
+            <button id="btn-nav-upload" class="primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">📂 Subir PGN</button>
+            <span id="engine-status" style="font-size: 0.8rem; color: var(--text-muted); min-width: 100px;">Motor: Listo</span>
+            <input type="file" id="pgn-file" accept=".pgn" style="display: none;">
+        </div>
+    </header>
+
+    <main>
+        <section class="game-container">
+            <div class="board-layout-container" style="display: flex; gap: 2rem; align-items: center; justify-content: center; position: relative; margin: auto; max-height: 100%; padding: 2rem 0;">
+                <div class="evaluation-bar-wrapper" style="display: flex; align-items: center; position: relative; height: 100%;">
+                    <div id="eval-value" style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; font-weight: bold; color: var(--accent-gold); width: 40px; text-align: center;">0.0</div>
+                    <div class="evaluation-bar">
+                        <div id="eval-fill" class="eval-fill" style="height: 50%;"></div>
+                    </div>
+                </div>
+                
+                <div class="board-wrapper">
+                    <div id="chessboard"></div>
+                </div>
+            </div>
+            
+            <div id="hint-container" style="margin-top: 0.5rem; min-height: 30px; display: flex; justify-content: center;">
+                <button id="btn-show-hint" class="primary" style="display: none; background: var(--accent-purple); color: white; padding: 0.4rem 1rem; font-size: 0.8rem;">Ver Jugada Correcta</button>
+            </div>
+        </section>
+
+        <aside class="analysis-sidebar">
+            <div id="game-selector-container" style="display: none; background: var(--primary-bg); padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label for="game-select" style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap;">Partida:</label>
+                    <select id="game-select" style="flex: 1; background: var(--secondary-bg); color: white; border: 1px solid var(--accent-gold); border-radius: 4px; padding: 2px 4px; font-size: 0.75rem;"></select>
+                </div>
+            </div>
+
+            <div class="whisperer-card">
+                <div class="perspective-selector" style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                    <button id="perspective-white" class="trainer-btn active">⚪ Blancas</button>
+                    <button id="perspective-black" class="trainer-btn">⚫ Negras</button>
+                </div>
+                <div class="whisperer-header">
+                    <div class="avatar-container" style="width: 40px; height: 40px;">
+                        <img id="whisperer-avatar" src="/king.png" alt="Ordo Magnus">
+                    </div>
+                    <div class="whisperer-info">
+                        <h2 id="trainer-name" style="font-size: 0.9rem;">Ordo Magnus</h2>
+                        <p id="whisperer-mood" style="font-size: 0.65rem;">Estado: NEUTRAL</p>
+                    </div>
+                </div>
+                <div class="speech-bubble" style="padding: 0.5rem; font-size: 0.8rem;">
+                    <p id="whisperer-text">¡Listo para analizar!</p>
+                </div>
+            </div>
+
+            <div class="game-controls" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0.5rem 0.75rem;">
+                <div class="board-controls" style="margin-bottom: 0.5rem; display: flex; gap: 0.3rem; align-items: center; justify-content: center;">
+                    <button id="btn-first" title="Inicio" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">|&lt;</button>
+                    <button id="btn-prev" title="Anterior" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&lt;</button>
+                    <button id="btn-autoplay" class="primary" title="Auto" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">▶ Auto</button>
+                    <button id="btn-next" title="Siguiente" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&gt;</button>
+                    <button id="btn-last" title="Final" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&gt;|</button>
+                    <button id="btn-flip" title="Girar" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">🔄</button>
+                </div>
+
+                <div class="moves-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <h3 style="margin-bottom: 0.25rem; font-size: 0.8rem; color: var(--accent-gold);">Lista de Jugadas</h3>
+                    <div id="moves-list" class="moves-list" style="flex: 1; overflow-y: auto;">
+                        <!-- Moves will be injected here -->
+                    </div>
+                </div>
+
+                <div id="accuracy-report" class="accuracy-container" style="display: none; margin-top: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-around; font-size: 0.8rem; font-weight: bold;">
+                        <div id="acc-white">--%</div>
+                        <div id="acc-black">--%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pgn-input-area" style="background: rgba(255,255,255,0.02); padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <textarea id="pgn-input" placeholder="Pega tu PGN..." style="height: 40px; font-size: 0.7rem;"></textarea>
+                <button id="btn-analyze" style="display: none;"></button>
+            </div>
+        </aside>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
