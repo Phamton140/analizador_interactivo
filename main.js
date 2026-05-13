@@ -1028,26 +1028,35 @@ class GrandmasterWhisperer {
     // speak=false → update text silently (manual navigation)
 
     say(text, mood = 'NEUTRAL', speak = false) {
-        this.whispererText.innerText = text;
         const bubble = document.querySelector('.speech-bubble');
         const avatar = document.querySelector('.avatar-container');
-        bubble.classList.remove('pulse');
-        void bubble.offsetWidth;
-        bubble.classList.add('pulse');
         
+        const updateUI = () => {
+            this.whispererText.innerText = text;
+            bubble.classList.remove('pulse');
+            void bubble.offsetWidth;
+            bubble.classList.add('pulse');
+        };
+
         clearTimeout(this.autoPlayTimeout);
         
         if (speak && window.speechSynthesis) {
             const autoState = this.isAutoPlaying;
-            if (avatar) avatar.classList.add('talking');
-            this.personality.speak(text, () => {
-                if (avatar) avatar.classList.remove('talking');
-                if (autoState && this.isAutoPlaying) {
-                    this.nextAutoStep();
+            this.personality.speak(text, 
+                () => { // onEnd
+                    if (avatar) avatar.classList.remove('talking');
+                    if (autoState && this.isAutoPlaying) {
+                        this.nextAutoStep();
+                    }
+                },
+                () => { // onStart
+                    updateUI();
+                    if (avatar) avatar.classList.add('talking');
                 }
-            });
+            );
         } else {
             if (window.speechSynthesis) window.speechSynthesis.cancel();
+            updateUI();
             if (avatar) avatar.classList.remove('talking');
             if (this.isAutoPlaying) {
                 const waitTime = Math.max(1500, text.length * 40);

@@ -333,14 +333,16 @@ export class PersonalityEngine {
         return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName, isMate: false };
     }
 
-    speak(text, onEndCallback = null) {
+    speak(text, onEndCallback = null, onStartCallback = null) {
         if (!('speechSynthesis' in window)) {
+            if (onStartCallback) onStartCallback();
             if (onEndCallback) onEndCallback();
             return;
         }
         if (this._currentUtterance) {
             this._currentUtterance.onend = null;
             this._currentUtterance.onerror = null;
+            this._currentUtterance.onstart = null;
         }
         window.speechSynthesis.cancel();
         
@@ -349,7 +351,6 @@ export class PersonalityEngine {
         
         utterance.lang = 'es-ES';
         
-        // Cache voices to avoid getVoices() latency during the speak loop
         if (!this._voices || this._voices.length === 0) {
             this._voices = window.speechSynthesis.getVoices();
         }
@@ -363,6 +364,12 @@ export class PersonalityEngine {
         utterance.pitch = 0.9;
         utterance.rate = 1.0;
         
+        if (onStartCallback) {
+            utterance.onstart = () => {
+                if (this._currentUtterance === utterance) onStartCallback();
+            };
+        }
+
         if (onEndCallback) {
             utterance.onend = () => {
                 if (this._currentUtterance === utterance) onEndCallback();
@@ -372,7 +379,6 @@ export class PersonalityEngine {
             };
         }
         
-        // Small delay after cancel() helps browsers clear the speech queue and avoids the 10s latency bug
         setTimeout(() => {
             window.speechSynthesis.speak(utterance);
         }, 50);
