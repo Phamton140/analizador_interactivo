@@ -22,6 +22,9 @@ class GrandmasterWhisperer {
         this.btnHintYes = document.getElementById('btn-hint-yes');
         this.btnHintNo = document.getElementById('btn-hint-no');
         this.evalFill = document.getElementById('eval-fill');
+        this.lichessUsernameInput = document.getElementById('lichess-username');
+        this.btnFetchLichess = document.getElementById('btn-fetch-lichess');
+        this.lichessStatus = document.getElementById('lichess-status');
 
         this.history = [];
         this.currentIndex = -1;
@@ -76,6 +79,10 @@ class GrandmasterWhisperer {
         });
 
         document.getElementById('btn-export-pgn').addEventListener('click', () => this.exportPgn());
+        this.btnFetchLichess.addEventListener('click', () => this.fetchLichessGames());
+        this.lichessUsernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.fetchLichessGames();
+        });
     }
 
     initEngine() {
@@ -253,15 +260,91 @@ class GrandmasterWhisperer {
 
     showGameSelector(games) {
         this.gameSelector.innerHTML = '';
+        
+        // Group games by modality (Blitz, Rapid, Classic)
+        const groups = {
+            'Blitz': [],
+            'Rapid': [],
+            'Classical': [],
+            'Otros': []
+        };
+
         games.forEach((g, i) => {
-            const white = g.match(/\[White "(.*?)"\]/)?.[1] || "Blanco";
-            const black = g.match(/\[Black "(.*?)"\]/)?.[1] || "Negro";
-            const option = document.createElement('option');
-            option.value = i;
-            option.innerText = `Partida ${i+1}: ${white} vs ${black}`;
-            this.gameSelector.appendChild(option);
+            const event = g.match(/\[Event "(.*?)"\]/)?.[1] || "";
+            let category = 'Otros';
+            if (event.toLowerCase().includes('blitz')) category = 'Blitz';
+            else if (event.toLowerCase().includes('rapid')) category = 'Rapid';
+            else if (event.toLowerCase().includes('classical') || event.toLowerCase().includes('clásico')) category = 'Classical';
+            
+            groups[category].push({ pgn: g, index: i });
         });
+
+        Object.keys(groups).forEach(cat => {
+            if (groups[cat].length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = cat;
+                groups[cat].forEach(gameData => {
+                    const g = gameData.pgn;
+                    const white = g.match(/\[White "(.*?)"\]/)?.[1] || "Blanco";
+                    const black = g.match(/\[Black "(.*?)"\]/)?.[1] || "Negro";
+                    const result = g.match(/\[Result "(.*?)"\]/)?.[1] || "";
+                    const option = document.createElement('option');
+                    option.value = gameData.index;
+                    option.innerText = `${white} vs ${black} (${result})`;
+                    optgroup.appendChild(option);
+                });
+                this.gameSelector.appendChild(optgroup);
+            }
+        });
+        
         this.gameSelectorContainer.style.display = 'block';
+    }
+
+    async fetchLichessGames() {
+        const username = this.lichessUsernameInput.value.trim();
+        if (!username) {
+            this.setLichessStatus('Por favor ingresa un usuario', 'error');
+            return;
+        }
+
+        this.setLichessStatus('Buscando partidas...', 'loading');
+        this.btnFetchLichess.disabled = true;
+
+        try {
+            // Fetch latest 30 games of Classic, Rapid and Blitz
+            const url = `https://lichess.org/api/games/user/${username}?max=30&perfType=blitz,rapid,classical`;
+            const response = await fetch(url, {
+                headers: { 'Accept': 'application/x-chess-pgn' }
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) throw new Error('Usuario no encontrado');
+                if (response.status === 429) throw new Error('Demasiadas solicitudes. Espera un momento.');
+                throw new Error('Error al conectar con Lichess');
+            }
+
+            const pgnData = await response.text();
+            if (!pgnData.trim()) {
+                throw new Error('No se encontraron partidas recientes (Blitz/Rapid/Clásico)');
+            }
+
+            this.pgnInput.value = pgnData;
+            this.processInput(true);
+            
+            this.setLichessStatus(`¡${this.allGames.length} partidas cargadas!`, 'success');
+            this.say(`He cargado tus partidas de Lichess. Tienes ${this.allGames.length} para analizar, agrupadas por modalidad.`, 'HAPPY');
+            
+        } catch (error) {
+            console.error('Lichess fetch error:', error);
+            this.setLichessStatus(error.message, 'error');
+        } finally {
+            this.btnFetchLichess.disabled = false;
+        }
+    }
+
+    setLichessStatus(text, type) {
+        this.lichessStatus.innerText = text;
+        this.lichessStatus.className = 'search-status ' + (type ? 'status-' + type : '');
     }
 
     loadGame(index) {

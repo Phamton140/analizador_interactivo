@@ -7,6 +7,7 @@
 ## 🚀 Características Principales
 
 * **Análisis Total de la Partida:** Carga un archivo PGN o introduce tus movimientos. El sistema evalúa instantáneamente toda la partida y genera un reporte de precisión (basado en la pérdida de centipeones).
+* **Integración Directa con Lichess:** Acceso inmediato a tu historial de partidas mediante búsqueda por usuario. El sistema categoriza automáticamente las partidas en modalidades **Classical, Rapid y Blitz**, permitiendo un estudio enfocado y organizado sin necesidad de copiar manualmente archivos PGN.
 * **Carga de PGN Ultra-Resiliente:** Incorpora un motor de **Reconstrucción Manual de Jugadas** capaz de procesar archivos PGN complejos provenientes de plataformas como **Chess.com y Lichess**, incluso si contienen etiquetas no estándar o errores de formato que otros analizadores rechazarían.
 * **Identidad Visual Persistente:** Etiquetas de jugadores minimalistas y transparentes integradas directamente en el tablero. El sistema gestiona identidades de forma persistente, manteniendo los nombres reales y los **trofeos de victoria (con resplandor dorado)** visibles incluso durante los intensos ciclos de re-análisis del motor.
 * **Diccionario de Aperturas Offline Dinámico:** Reconoce decenas de aperturas y variantes (Ej: Defensa Siciliana, Variante Najdorf) mediante un árbol de prefijos exhaustivo integrado, sin requerir metadata de plataformas externas.

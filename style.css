@@ -525,6 +525,49 @@ main {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
+.lichess-search-area {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.01);
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lichess-search-area p {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.search-box {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.search-box input {
+  flex: 1;
+  background: var(--primary-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.4rem;
+  color: white;
+  font-size: 0.75rem;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+
+.search-status {
+  font-size: 0.65rem;
+  margin-top: 0.4rem;
+  min-height: 1rem;
+}
+
+.status-loading { color: var(--accent-gold); }
+.status-error { color: var(--danger); }
+.status-success { color: var(--success); }
+
 .pgn-input-area p {
   font-size: 0.65rem;
   color: var(--text-muted);
