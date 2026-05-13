@@ -220,10 +220,11 @@ export class PersonalityEngine {
         this._msgCache = {};
 
         // Pre-load voices for browsers that don't load them immediately
+        this._voices = [];
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
+            this._voices = window.speechSynthesis.getVoices();
             window.speechSynthesis.onvoiceschanged = () => {
-                window.speechSynthesis.getVoices();
+                this._voices = window.speechSynthesis.getVoices();
             };
         }
     }
@@ -348,12 +349,15 @@ export class PersonalityEngine {
         
         utterance.lang = 'es-ES';
         
-        // Better voice selection: prefer high quality local Microsoft voices if available
-        const voices = window.speechSynthesis.getVoices();
-        let preferred = voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft') && v.name.toLowerCase().includes('helena'))
-                     || voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft'))
-                     || voices.find(v => v.lang.startsWith('es') && v.localService)
-                     || voices.find(v => v.lang.startsWith('es'));
+        // Cache voices to avoid getVoices() latency during the speak loop
+        if (!this._voices || this._voices.length === 0) {
+            this._voices = window.speechSynthesis.getVoices();
+        }
+        
+        let preferred = this._voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft') && v.name.toLowerCase().includes('helena'))
+                     || this._voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft'))
+                     || this._voices.find(v => v.lang.startsWith('es') && v.localService)
+                     || this._voices.find(v => v.lang.startsWith('es'));
                      
         if (preferred) utterance.voice = preferred;
         utterance.pitch = 0.9;
@@ -368,6 +372,9 @@ export class PersonalityEngine {
             };
         }
         
-        window.speechSynthesis.speak(utterance);
+        // Small delay after cancel() helps browsers clear the speech queue and avoids the 10s latency bug
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, 50);
     }
 }
