@@ -667,7 +667,7 @@ class GrandmasterWhisperer {
         
         if (this.isAutoPlaying) {
             this.wasAutoPlaying = true;
-            this.toggleAutoPlay(); // Pauses auto-play
+            this.toggleAutoPlay(false); // Pauses auto-play without cutting off the current explanation
         } else {
             this.wasAutoPlaying = false;
         }
@@ -881,7 +881,7 @@ class GrandmasterWhisperer {
 
     // ─── AUTOPLAY ────────────────────────────────────────────────────────────
 
-    toggleAutoPlay() {
+    toggleAutoPlay(cancelSpeech = true) {
         this.isAutoPlaying = !this.isAutoPlaying;
         const btn = document.getElementById('btn-autoplay');
         if (this.isAutoPlaying) {
@@ -902,7 +902,11 @@ class GrandmasterWhisperer {
             btn.innerText = '▶ Auto';
             btn.classList.remove('pulse');
             clearTimeout(this.autoPlayTimeout);
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            // Only cancel speech if explicitly requested (e.g. manual stop)
+            // This allows blunder explanations to finish even if autoplay pauses for the prompt
+            if (cancelSpeech === true && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
         }
     }
 
