@@ -966,8 +966,9 @@ class GrandmasterWhisperer {
             
             // Enable full analysis collection so we can show accuracy at the end
             this.isAnalyzingFullGame = true;
-            this.analysisResults = []; 
-            
+            if (!this.analysisResults || this.analysisResults.length === 0) {
+                this.analysisResults = [0]; 
+            }            
             // If we're already at the end, restart from beginning
             const nextIndex = this.currentIndex >= this.history.length - 1
                 ? 0
