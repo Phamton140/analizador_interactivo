@@ -115,6 +115,29 @@ main {
   overflow: hidden;
 }
 
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.square.selected-square::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(251, 191, 36, 0.45);
+  z-index: 2;
+}
+
+.square.selected-square .piece {
+  z-index: 3;
+}
+
 .analysis-sidebar {
   background-color: var(--secondary-bg);
   border-left: 1px solid rgba(255, 255, 255, 0.1);

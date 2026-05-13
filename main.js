@@ -38,6 +38,10 @@ class GrandmasterWhisperer {
         this.isShowingHint = false;
         this.hintReturnIndex = -1;
         this.wasAutoPlaying = false;
+        
+        // Interactive play
+        this.selectedSquare = null;
+
         // Debounce timer for processInput
         this._inputDebounce = null;
 
@@ -64,6 +68,12 @@ class GrandmasterWhisperer {
         document.getElementById('perspective-black').addEventListener('click', () => this.setPerspective('b'));
         this.btnHintYes.addEventListener('click', () => this.handleHintYes());
         this.btnHintNo.addEventListener('click', () => this.handleHintNo());
+        
+        // Board interactivity
+        this.boardElement.addEventListener('click', (e) => {
+            const squareEl = e.target.closest('.square');
+            if (squareEl) this.handleSquareClick(squareEl.dataset.square);
+        });
     }
 
     initEngine() {
@@ -828,6 +838,12 @@ class GrandmasterWhisperer {
                     pieceImg.className = 'piece';
                     square.appendChild(pieceImg);
                 }
+                
+                // Selection highlight
+                if (this.selectedSquare === `${file}${rank}`) {
+                    square.classList.add('selected-square');
+                }
+
                 if (this.currentIndex >= 0) {
                     const lastMove = this.history[this.currentIndex];
                     if (lastMove?.from === `${file}${rank}` || lastMove?.to === `${file}${rank}`) {
@@ -837,6 +853,58 @@ class GrandmasterWhisperer {
                 this.boardElement.appendChild(square);
             });
         });
+    }
+
+    handleSquareClick(square) {
+        // Disable interaction during autoplay or full analysis
+        if (this.isAutoPlaying || this.isAnalyzingFullGame) return;
+
+        const piece = this.game.get(square);
+        const turn = this.game.turn();
+
+        // 1. Select piece of the current turn
+        if (piece && piece.color === turn) {
+            this.selectedSquare = (this.selectedSquare === square) ? null : square;
+            this.renderBoard();
+            return;
+        }
+
+        // 2. Try to execute a move
+        if (this.selectedSquare) {
+            try {
+                const move = this.game.move({
+                    from: this.selectedSquare,
+                    to: square,
+                    promotion: 'q' // Always promote to queen for simplicity in this trainer
+                });
+
+                if (move) {
+                    this.selectedSquare = null;
+                    
+                    // Update the UI and internal state
+                    this.history = this.game.history({ verbose: true });
+                    this.currentIndex = this.history.length - 1;
+                    
+                    // Update PGN textarea (adding * if no result)
+                    let pgn = this.game.pgn();
+                    if (!pgn.includes('1-0') && !pgn.includes('0-1') && !pgn.includes('1/2-1/2')) {
+                        if (!pgn.endsWith('*')) pgn += ' *';
+                    }
+                    this.pgnInput.value = pgn;
+                    
+                    // Refresh view
+                    this.renderMovesList();
+                    this.renderBoard();
+                    this.updateActiveMove();
+                } else {
+                    this.selectedSquare = null;
+                    this.renderBoard();
+                }
+            } catch (err) {
+                this.selectedSquare = null;
+                this.renderBoard();
+            }
+        }
     }
 
     flipBoard() { this.isFlipped = !this.isFlipped; this.renderBoard(); }
