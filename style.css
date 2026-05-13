@@ -95,7 +95,7 @@ main {
 .board-wrapper {
   position: relative;
   width: 100%;
-  max-width: min(70vh, 800px);
+  max-width: min(88vh, 900px);
   aspect-ratio: 1;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
@@ -293,12 +293,16 @@ main {
   font-weight: 800;
   color: var(--accent-gold);
   text-transform: uppercase;
-  padding: 4px;
+  padding: 8px 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--secondary-bg);
+  z-index: 10;
 }
 
 .move-item {
