@@ -150,7 +150,7 @@ main {
 
 .voice-waves {
   position: absolute;
-  bottom: 18px;
+  bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
