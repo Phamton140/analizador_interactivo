@@ -303,13 +303,22 @@ class GrandmasterWhisperer {
                     const resultMatch = pgn.match(/\[Result\s*"(.*?)"\]/i);
                     const roundMatch = pgn.match(/\[Round\s*"(.*?)"\]/i);
                     
-                    if (whiteMatch) this.game.header('White', whiteMatch[1]);
-                    if (blackMatch) this.game.header('Black', blackMatch[1]);
-                    if (resultMatch) this.game.header('Result', resultMatch[1]);
+                    if (whiteMatch) {
+                        this.game.header('White', whiteMatch[1]);
+                        this.forcedWhite = whiteMatch[1];
+                    }
+                    if (blackMatch) {
+                        this.game.header('Black', blackMatch[1]);
+                        this.forcedBlack = blackMatch[1];
+                    }
+                    if (resultMatch) {
+                        this.game.header('Result', resultMatch[1]);
+                        this.forcedResult = resultMatch[1];
+                    }
                     if (roundMatch) this.game.header('Round', roundMatch[1]);
                     
                     console.log(`Reconstruction succeeded. Moves: ${movesCount}`);
-                    this.updatePlayerLabels(); // Force update
+                    this.updatePlayerLabels(); 
                 }
             }
 
@@ -932,14 +941,13 @@ class GrandmasterWhisperer {
         if (!topEl || !bottomEl) return;
 
         const headers = this.game.header();
-        console.log("updatePlayerLabels headers:", headers);
+        
+        let white = headers.White || headers.white || this.forcedWhite || "Anonimo";
+        let black = headers.Black || headers.black || this.forcedBlack || "Anonimo";
+        const result = headers.Result || headers.result || this.forcedResult || "*";
 
-        let white = headers.White || headers.white || "Anonimo";
-        let black = headers.Black || headers.black || "Anonimo";
-        const result = headers.Result || headers.result || "*";
-
-        if (white === '?') white = "Anonimo";
-        if (black === '?') black = "Anonimo";
+        if (white === '?' || !white) white = "Anonimo";
+        if (black === '?' || !black) black = "Anonimo";
 
         let whiteLabel = `⬜ ${white}`;
         let blackLabel = `⬛ ${black}`;
@@ -954,6 +962,7 @@ class GrandmasterWhisperer {
             topEl.innerHTML = blackLabel;
             bottomEl.innerHTML = whiteLabel;
         }
+        console.log(`DOM labels updated: Top=${topEl.innerText}, Bottom=${bottomEl.innerText}`);
     }
 
     handleSquareClick(square) {
