@@ -317,7 +317,6 @@ class GrandmasterWhisperer {
                     }
                     if (roundMatch) this.game.header('Round', roundMatch[1]);
                     
-                    console.log(`Reconstruction succeeded. Moves: ${movesCount}`);
                     this.updatePlayerLabels(); 
                 }
             }
@@ -946,14 +945,20 @@ class GrandmasterWhisperer {
         let black = (headers.Black && headers.Black !== '?') ? headers.Black : (headers.black && headers.black !== '?' ? headers.black : (this.forcedBlack || "Anonimo"));
         let result = headers.Result || headers.result || this.forcedResult || "*";
 
+        // Fallback: if result is unknown (*), award trophy to the last person who moved
+        if (result === '*' && this.history && this.history.length > 0) {
+            const lastMove = this.history[this.history.length - 1];
+            result = lastMove.color === 'w' ? '1-0' : '0-1';
+        }
+
         if (white === '?' || !white) white = "Anonimo";
         if (black === '?' || !black) black = "Anonimo";
 
         let whiteLabel = `⬜ ${white}`;
         let blackLabel = `⬛ ${black}`;
 
-        if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
-        if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
+        if (result === '1-0') whiteLabel += ' <span class="trophy" style="margin-left: 5px; filter: drop-shadow(0 0 2px gold);">🏆</span>';
+        if (result === '0-1') blackLabel += ' <span class="trophy" style="margin-left: 5px; filter: drop-shadow(0 0 2px gold);">🏆</span>';
 
         if (this.isFlipped) {
             topEl.innerHTML = whiteLabel;
@@ -962,7 +967,6 @@ class GrandmasterWhisperer {
             topEl.innerHTML = blackLabel;
             bottomEl.innerHTML = whiteLabel;
         }
-        console.log(`DOM labels updated: Top=${topEl.innerText}, Bottom=${bottomEl.innerText}`);
     }
 
     handleSquareClick(square) {
