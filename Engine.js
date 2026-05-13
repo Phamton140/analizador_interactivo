@@ -29,7 +29,6 @@ export class StockfishEngine {
     }
 
     analyzePosition(fen, depth = 10) {
-        this.sendCommand('stop');
         this.sendCommand(`position fen ${fen}`);
         this.sendCommand(`go depth ${depth}`);
     }

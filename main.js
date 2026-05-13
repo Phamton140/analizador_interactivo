@@ -17,8 +17,10 @@ class GrandmasterWhisperer {
         this.accuracyReport = document.getElementById('accuracy-report');
         this.gameSelector = document.getElementById('game-select');
         this.gameSelectorContainer = document.getElementById('game-selector-container');
-        this.hintBtn = document.getElementById('btn-show-hint');
-        this.bestMoveHint = document.createElement('div'); // In-memory hint holder
+        this.hintContainer = document.getElementById('hint-container');
+        this.hintMsg = document.getElementById('hint-msg');
+        this.btnHintYes = document.getElementById('btn-hint-yes');
+        this.btnHintNo = document.getElementById('btn-hint-no');
         this.evalFill = document.getElementById('eval-fill');
 
         this.history = [];
@@ -27,10 +29,17 @@ class GrandmasterWhisperer {
         this.isAutoPlaying = false;
         this.autoPlayTimeout = null;
         this.isAnalyzingFullGame = false;
-        this.analysisResults = [];
+        this.analysisResults = [];   // [0..n] one eval per move position
         this.currentEval = 0;
-        this.currentBestMove = null;
+        this.currentBestPV = [];     // principal variation: array of UCI moves
         this.allGames = [];
+
+        // Hint mode: temporarily show PV on board, then restore
+        this.isShowingHint = false;
+        this.hintReturnIndex = -1;
+        this.wasAutoPlaying = false;
+        // Debounce timer for processInput
+        this._inputDebounce = null;
 
         this.initEventListeners();
         this.initEngine();
@@ -46,12 +55,15 @@ class GrandmasterWhisperer {
         document.getElementById('btn-autoplay').addEventListener('click', () => this.toggleAutoPlay());
         document.getElementById('btn-nav-upload').addEventListener('click', () => document.getElementById('pgn-file').click());
         document.getElementById('pgn-file').addEventListener('change', (e) => this.handleFileUpload(e));
-        document.getElementById('pgn-input').addEventListener('input', () => this.processInput());
+        document.getElementById('pgn-input').addEventListener('input', () => {
+            clearTimeout(this._inputDebounce);
+            this._inputDebounce = setTimeout(() => this.processInput(), 600);
+        });
         document.getElementById('game-select').addEventListener('change', (e) => this.loadGame(parseInt(e.target.value)));
-        
         document.getElementById('perspective-white').addEventListener('click', () => this.setPerspective('w'));
         document.getElementById('perspective-black').addEventListener('click', () => this.setPerspective('b'));
-        this.hintBtn.addEventListener('click', () => this.showHint());
+        this.btnHintYes.addEventListener('click', () => this.handleHintYes());
+        this.btnHintNo.addEventListener('click', () => this.handleHintNo());
     }
 
     initEngine() {
@@ -62,6 +74,8 @@ class GrandmasterWhisperer {
         this.engine.onInfo = (msg) => this.handleEngineInfo(msg);
         this.engine.onBestMove = (msg) => this.handleBestMove(msg);
     }
+
+    // ─── PGN INPUT ────────────────────────────────────────────────────────────
 
     handleFileUpload(e) {
         const file = e.target.files[0];
@@ -74,34 +88,79 @@ class GrandmasterWhisperer {
         reader.readAsText(file);
     }
 
+    /**
+     * Detects if a PGN is already written in English algebraic notation.
+     * Key signals: 'N' = knight (Spanish uses 'C'), 'Q' = queen (Spanish uses 'D').
+     */
+    isPgnInEnglish(pgn) {
+        // Remove headers and comments before checking
+        const moveSection = pgn
+            .replace(/\[[^\]]*\]/g, '')
+            .replace(/\{[^}]*\}/g, '');
+        // N or Q followed by a square/capture = English piece notation
+        return /\b[NQ][a-h1-8x]/.test(moveSection);
+    }
+
     translatePgnToEnglish(pgn) {
-        // Translation map: ES -> EN
-        // R -> K (Rey), D -> Q (Dama), T -> R (Torre), A -> B (Alfil), C -> N (Caballo)
+        // If already in English, skip to avoid corrupting Rook (R) and other pieces
+        if (this.isPgnInEnglish(pgn)) return pgn;
+
         const lines = pgn.split('\n');
         return lines.map(line => {
             if (line.trim().startsWith('[')) return line;
             return line
-                .replace(/R(?=[a-h|x|0-9])/g, 'K')
-                .replace(/D(?=[a-h|x|0-9])/g, 'Q')
-                .replace(/T(?=[a-h|x|0-9])/g, 'R')
-                .replace(/A(?=[a-h|x|0-9])/g, 'B')
-                .replace(/C(?=[a-h|x|0-9])/g, 'N');
+                .replace(/R(?=[a-hx0-9])/g, 'K')
+                .replace(/D(?=[a-hx0-9])/g, 'Q')
+                .replace(/T(?=[a-hx0-9])/g, 'R')
+                .replace(/A(?=[a-hx0-9])/g, 'B')
+                .replace(/C(?=[a-hx0-9])/g, 'N');
         }).join('\n');
+    }
+
+    /**
+     * Strips Arena/engine annotations from PGN:
+     * - {comments with engine PV and eval}
+     * - NAGs ($1, $2...)
+     * - "1. ..." black-to-move notation
+     * Leaves headers and move text intact.
+     */
+    cleanArenaAnnotations(pgn) {
+        // Strip {comments} using a character scanner (handles parens inside)
+        let result = '';
+        let depth = 0;
+        for (let i = 0; i < pgn.length; i++) {
+            if (pgn[i] === '{') { depth++; continue; }
+            if (pgn[i] === '}') { depth--; continue; }
+            if (depth === 0) result += pgn[i];
+        }
+        // Remove "1. ..." style (black forfeits / game starts with Black)
+        result = result.replace(/\d+\.\s*\.\.\.\s*/g, '');
+        // Remove NAG annotations
+        result = result.replace(/\$\d+/g, '');
+        // Collapse extra whitespace
+        result = result.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+        return result;
+    }
+
+    /**
+     * Returns true if a PGN game string has at least one real move.
+     */
+    gameHasMoves(pgn) {
+        const cleaned = this.cleanArenaAnnotations(pgn);
+        // After headers, check if there is a move (starts with digit + dot or a piece letter)
+        const moveSection = cleaned.replace(/\[[^\]]*\]/g, '').trim();
+        // A real move token: "1." or "e4" or piece move
+        return /[1-9]\d*\.\s*[a-hA-Z]/.test(moveSection);
     }
 
     processInput() {
         let content = this.pgnInput.value.trim();
-        if (!content) {
-            this.resetBoard();
-            return;
-        }
-        
-        const isStandard = content.includes('[Event ');
+        if (!content) { this.resetBoard(); return; }
 
+        const isStandard = content.includes('[Event');
         if (!isStandard) {
-            // Trigger only if ends with *
+            // Manual input: only trigger on * at end
             if (!content.endsWith('*')) return;
-            
             content = this.translatePgnToEnglish(content);
             const rawGames = content.split('@').filter(g => g.trim() !== "");
             let pgnFormatted = "";
@@ -112,35 +171,51 @@ class GrandmasterWhisperer {
             });
             content = pgnFormatted;
         } else {
+            // Arena / standard PGN: only parse when at least one game result is present
+            // This prevents chess.js errors while the user is still pasting
+            const hasResult = /\b(1-0|0-1|1\/2-1\/2|\*)\s*$/.test(content) ||
+                              /\b(1-0|0-1|1\/2-1\/2)/.test(content);
+            if (!hasResult) return;
             content = this.translatePgnToEnglish(content);
         }
-        
-        const games = content.split(/\[Event /).filter(g => g.trim() !== "").map(g => "[Event " + g);
-        this.allGames = games;
-        
-        if (games.length > 0) {
-            if (games.length > 1) this.showGameSelector(games);
-            else this.gameSelectorContainer.style.display = 'none';
-            this.loadGame(0);
+
+        // Split into individual games and filter out empty/forfeit ones
+        const allRaw = content.split(/(?=\[Event )/).filter(g => g.trim() !== "");
+        const games = allRaw.filter(g => this.gameHasMoves(g));
+
+        if (games.length === 0) {
+            this.whispererText.innerText = "No se encontraron partidas con jugadas analizables en este archivo.";
+            return;
         }
+
+        this.allGames = games;
+        if (games.length > 1) this.showGameSelector(games);
+        else this.gameSelectorContainer.style.display = 'none';
+        this.loadGame(0);
     }
 
     resetBoard() {
         this.isAnalyzingFullGame = false;
+        this.isAutoPlaying = false;
+        clearTimeout(this.autoPlayTimeout);
         this.engine.stop();
         this.game = new Chess();
         this.history = [];
         this.currentIndex = -1;
         this.allGames = [];
         this.analysisResults = [];
+        this.bestMoves = [];
+        this.currentBestPV = [];
+        this.isShowingHint = false;
+        this.wasAutoPlaying = false;
         this.renderBoard();
         this.renderMovesList();
         this.updateEvalBar(0);
-        this.bestMoveHint.innerText = '';
+        this.hintContainer.style.display = 'none';
         this.accuracyReport.style.display = 'none';
         this.gameSelectorContainer.style.display = 'none';
         if (window.speechSynthesis) window.speechSynthesis.cancel();
-        this.whispererText.innerText = "¡Listo para una nueva partida! Pega tu PGN o escribe las jugadas.";
+        this.whispererText.innerText = "Listo. Pega una PGN o escribe jugadas seguidas de *.";
     }
 
     showGameSelector(games) {
@@ -158,15 +233,24 @@ class GrandmasterWhisperer {
 
     loadGame(index) {
         let pgn = this.allGames[index];
+        // 1. Strip Arena engine comments and forfeit annotations
+        pgn = this.cleanArenaAnnotations(pgn);
+        // 2. Translate Spanish notation to English for chess.js
         pgn = this.translatePgnToEnglish(pgn);
         try {
+            this.personality._msgCache = {};
             this.game.loadPgn(pgn);
             this.history = this.game.history({ verbose: true });
+            if (this.history.length === 0) {
+                this.whispererText.innerText = "Esta partida no tiene jugadas para analizar.";
+                return;
+            }
             this.renderMovesList();
             this.accuracyReport.style.display = 'none';
             this.startFullAnalysis();
         } catch (e) {
-            this.say("¡Vaya! Hubo un error al leer esta partida.");
+            console.error('PGN parse error:', e, pgn.slice(0, 300));
+            this.say("Error al procesar la partida. Verifica el formato PGN.");
         }
     }
 
@@ -174,14 +258,17 @@ class GrandmasterWhisperer {
         this.personality.setAnalysisSide(side);
         document.getElementById('perspective-white').classList.toggle('active', side === 'w');
         document.getElementById('perspective-black').classList.toggle('active', side === 'b');
-        this.say(`Analizando como ${side === 'w' ? 'Blancas' : 'Negras'}.`);
+        this.say(`Perspectiva cambiada a ${side === 'w' ? 'Blancas' : 'Negras'}.`);
     }
+
+    // ─── FULL GAME ANALYSIS ───────────────────────────────────────────────────
 
     startFullAnalysis() {
         this.isAnalyzingFullGame = true;
-        this.analysisResults = [0];
+        this.analysisResults = [0]; // position 0 = starting position = 0 cp
+        this.bestMoves = []; // Initialize bestMoves array to avoid undefined errors
         this.currentIndex = -1;
-        this.say("Iniciando análisis profundo...", "HAPPY");
+        this.whispererText.innerText = "Iniciando análisis de la partida...";
         this.analyzeNextMoveInGame();
     }
 
@@ -189,66 +276,515 @@ class GrandmasterWhisperer {
         if (!this.isAnalyzingFullGame) return;
         if (this.currentIndex >= this.history.length - 1) {
             this.isAnalyzingFullGame = false;
+            this.goToMove(-1);
             this.calculateAccuracy();
-            this.goToMove(0);
             return;
         }
         this.currentIndex++;
         this.game.reset();
-        for (let i = 0; i <= this.currentIndex; i++) {
-            this.game.move(this.history[i].san);
-        }
+        for (let i = 0; i <= this.currentIndex; i++) this.game.move(this.history[i].san);
         this.renderBoard();
         this.updateActiveMove();
         this.engine.analyzePosition(this.game.fen(), 8);
     }
 
-    calculateAccuracy() {
-        let whiteLosses = [];
-        let blackLosses = [];
-        for (let i = 1; i < this.analysisResults.length; i++) {
-            const prev = this.analysisResults[i-1];
-            const curr = this.analysisResults[i];
-            const side = this.history[i-1].color;
-            const loss = side === 'w' ? (prev - curr) : (curr - prev);
-            if (side === 'w') whiteLosses.push(Math.max(0, loss));
-            else blackLosses.push(Math.max(0, loss));
+    // ─── ENGINE HANDLERS ──────────────────────────────────────────────────────
+
+    handleEngineInfo(msg) {
+        const cpMatch = msg.match(/score cp (-?\d+)/);
+        const mateMatch = msg.match(/score mate (-?\d+)/);
+
+        if (cpMatch) {
+            const cp = parseInt(cpMatch[1]);
+            // From engine's perspective (side to move = positive is good for them)
+            // We want score from White's perspective always
+            this.currentEval = this.game.turn() === 'w' ? cp : -cp;
+        } else if (mateMatch) {
+            const mateIn = parseInt(mateMatch[1]);
+            // mateIn > 0 means side to move has mate, < 0 means side to move is getting mated
+            if (this.game.turn() === 'w') {
+                this.currentEval = mateIn > 0 ? (10000 - mateIn) : -(10000 + mateIn);
+            } else {
+                this.currentEval = mateIn > 0 ? -(10000 - mateIn) : (10000 + mateIn);
+            }
+            // Store mateIn for display
+            this._lastMateIn = mateIn;
         }
-        const avgW = whiteLosses.length ? whiteLosses.reduce((a,b)=>a+b,0)/whiteLosses.length : 0;
-        const avgB = blackLosses.length ? blackLosses.reduce((a,b)=>a+b,0)/blackLosses.length : 0;
-        const accWhite = Math.max(0, Math.min(100, 100 - (avgW / 2)));
-        const accBlack = Math.max(0, Math.min(100, 100 - (avgB / 2)));
 
-        document.getElementById('acc-white').innerText = `${accWhite.toFixed(1)}%`;
-        document.getElementById('acc-black').innerText = `${accBlack.toFixed(1)}%`;
-        this.accuracyReport.style.display = 'block';
+        this.updateEvalBar(this.currentEval, mateMatch ? parseInt(mateMatch[1]) : null);
 
-        const finalComment = this.personality.getFinalCommentary(accWhite, accBlack, this.history.length);
-        this.say(`¡Análisis completo! Blancas: ${accWhite.toFixed(1)}%, Negras: ${accBlack.toFixed(1)}%. ${finalComment}`, "HAPPY");
-    }
-
-    toggleAutoPlay() {
-        this.isAutoPlaying = !this.isAutoPlaying;
-        const btn = document.getElementById('btn-autoplay');
-        if (this.isAutoPlaying) {
-            btn.innerText = '⏸ Stop';
-            btn.classList.add('pulse');
-            this.nextAutoStep();
-        } else {
-            btn.innerText = '▶ Auto';
-            btn.classList.remove('pulse');
-            clearTimeout(this.autoPlayTimeout);
+        const pvMatch = msg.match(/ pv ([a-h1-8NnBbRrQqKkPp\-O]+(?:\s[a-h1-8NnBbRrQqKkPp\-O]+)*)/);
+        if (pvMatch) {
+            this.currentBestPV = pvMatch[1].split(' ').slice(0, 5); // up to 5 moves
         }
     }
 
-    nextAutoStep() {
-        if (!this.isAutoPlaying) return;
-        if (this.currentIndex >= this.history.length - 1) {
-            this.toggleAutoPlay();
+    handleBestMove(msg) {
+        if (this.currentIndex < 0) return;
+
+        if (this.isAnalyzingFullGame) {
+            this.analysisResults[this.currentIndex + 1] = this.currentEval;
+            if (this.currentBestPV && this.currentBestPV.length > 0) {
+                this.bestMoves[this.currentIndex + 1] = this.currentBestPV[0];
+            }
+
+            // Detect blunder during analysis and show msg, then continue after delay
+            if (this.currentIndex > 0) {
+                const prevEval = this.analysisResults[this.currentIndex];
+                const actualMove = this.history[this.currentIndex];
+                if (actualMove) {
+                    const side = actualMove.color;
+                    const diff = side === 'w' ? (prevEval - this.currentEval) : (this.currentEval - prevEval);
+                    if (diff > 250) {
+                        const analysis = this.personality.analyzeMove(diff, this.currentEval, side, false, this.history.slice(0, this.currentIndex + 1), this.currentIndex);
+                        const msgText = this.personality.getMessageForMove(this.currentIndex, analysis.category, analysis.isOpponent);
+                        this.say(`J${this.currentIndex + 1}: ${msgText}`, analysis.mood, false);
+                        setTimeout(() => this.analyzeNextMoveInGame(), 800);
+                        return;
+                    }
+                }
+            }
+            
+            // Force UI update for progress text by yielding to browser render thread
+            this.whispererText.innerText = `Analizando... jugada ${this.currentIndex + 1} de ${this.history.length}.`;
+            setTimeout(() => this.analyzeNextMoveInGame(), 10);
             return;
         }
-        this.goToMove(this.currentIndex + 1);
+
+        // Interactive mode: provide commentary for the current move
+        this._provideInteractiveCommentary();
     }
+
+    _provideInteractiveCommentary() {
+        const actualMove = this.history[this.currentIndex];
+        if (!actualMove) return;
+
+        const playedUCI = actualMove.from + actualMove.to + (actualMove.promotion || '');
+        const engineRecommendedUCI = this.bestMoves ? this.bestMoves[this.currentIndex] : undefined;
+        const isBestMove = engineRecommendedUCI && engineRecommendedUCI === playedUCI;
+
+        const side = actualMove.color;
+        const prevEval = this.analysisResults[this.currentIndex] ?? 0;
+        const diff = side === 'w' ? (prevEval - this.currentEval) : (this.currentEval - prevEval);
+
+        const moveNum = Math.floor(this.currentIndex / 2) + 1;
+        const isOpening = this.currentIndex < 12;
+        const isEndgame = this.currentIndex > 35 || this._isEndgamePosition();
+        const isUserSide = side === this.personality.analysisSide;
+
+        const analysis = this.personality.analyzeMove(
+            diff, this.currentEval, side, isOpening,
+            this.history.slice(0, this.currentIndex + 1),
+            this.currentIndex
+        );
+
+        const isBlunder = analysis.category === 'BLUNDER';
+        const isInaccuracy = analysis.category === 'INACCURACY';
+        const isBrilliant = analysis.category === 'BRILLIANT';
+        const isMate = analysis.isMate;
+        const isError = isBlunder || isInaccuracy;
+
+        // ── OPENING PHASE: only announce opening name ──────────────────────────
+        if (isOpening) {
+            let openingName = analysis.openingName;
+            const header = this.game.header();
+            if (header && header.Opening) {
+                openingName = header.Opening;
+                if (header.Variation) {
+                    openingName += ` variante ${header.Variation}`;
+                }
+                // Translate common English PGN terms to Spanish
+                openingName = openingName.replace(/Defense/gi, "Defensa")
+                                         .replace(/Opening/gi, "Apertura")
+                                         .replace(/Attack/gi, "Ataque")
+                                         .replace(/Variation/gi, "")
+                                         .replace(/Game/gi, "Apertura")
+                                         .replace(/Gambit/gi, "Gambito")
+                                         .trim();
+            }
+
+            if (openingName && openingName !== this.personality.lastOpeningName) {
+                this.personality.lastOpeningName = openingName;
+                this.say(`${openingName}.`, 'NEUTRAL', this.isAutoPlaying);
+            }
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) {
+                this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 1000);
+            }
+            return;
+        }
+
+        // ── FIRST MOVE OUT OF OPENING: announce end of theory ────────────────
+        if (!isOpening && this.currentIndex === 12 && this.isAutoPlaying) {
+            const openingAnnounced = this.personality.lastOpeningName;
+            const text = openingAnnounced
+                ? `Fin de la teoría. Se jugó la ${openingAnnounced}. Comienza el mediojuego.`
+                : `Fin de la fase inicial. Comienza el mediojuego.`;
+            this.say(text, 'NEUTRAL', true);
+            this.hintContainer.style.display = 'none';
+            this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 3000);
+            return;
+        }
+
+        // ── CHECK: was the opponent's PREVIOUS move an error? ─────────────────
+        let opponentPreviousError = 0;
+        if (this.currentIndex >= 1) {
+            const prevMove = this.history[this.currentIndex - 1];
+            if (prevMove) {
+                const e0 = this.analysisResults[this.currentIndex - 1] ?? 0;
+                const e1 = this.analysisResults[this.currentIndex] ?? 0;
+                const prevSide = prevMove.color;
+                opponentPreviousError = prevSide === 'w'
+                    ? (e0 - e1)   // positive = white lost cp = opponent (white) blundered
+                    : (e1 - e0);  // positive = black lost cp = opponent (black) blundered
+            }
+        }
+        const opponentBlundered = opponentPreviousError > 120;
+        const userPunished = opponentBlundered && diff < -30;  // user gained advantage
+        const userMissed   = opponentBlundered && diff >  50;  // user also lost cp
+
+        // ── MATE THREAT ────────────────────────────────────────────────────────
+        if (isMate) {
+            const msgText = this.personality.getMessageForMove(
+                this.currentIndex,
+                analysis.category === 'MATE_OWN' ? 'MATE_OWN' : 'MATE_OPP',
+                analysis.isOpponent
+            );
+            
+            // If they played well during a mate, praise them instead of prompting
+            if (!isError && !userMissed && analysis.category === 'MATE_OWN') {
+                this.say("¡Excelente! Encontraste una jugada fuerte que mantiene la red de mate.", "HAPPY", this.isAutoPlaying);
+                this.hintContainer.style.display = 'none';
+                if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
+            } else {
+                this.say(msgText, analysis.mood, this.isAutoPlaying);
+                this.promptHint();
+            }
+            return;
+        }
+
+        // ── BEST ENGINE MOVE ───────────────────────────────────────────────────
+        if (isBestMove && !isOpening) {
+            this.say("¡Precisión total! Has jugado exactamente la recomendación principal del módulo.", "HAPPY", this.isAutoPlaying);
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
+            return;
+        }
+
+        // ── ERROR MADE BY EITHER SIDE ──────────────────────────────────────────
+        if (isError) {
+            const msgText = this.personality.getMessageForMove(
+                this.currentIndex, analysis.category, analysis.isOpponent
+            );
+            this.say(msgText, analysis.mood, this.isAutoPlaying);
+            this.promptHint();
+            return;
+        }
+
+        // ── RESPONSE TO OPPONENT'S ERROR ───────────────────────────────────────
+        if (userPunished) {
+            this.say(this.personality.getPoolMessage('PUNISHED', this.currentIndex), 'HAPPY', this.isAutoPlaying);
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
+            return;
+        }
+        if (userMissed) {
+            this.say(this.personality.getPoolMessage('MISSED_CHANCE', this.currentIndex), 'SURPRISED', this.isAutoPlaying);
+            this.promptHint();
+            return;
+        }
+
+        // ── BRILLIANT MOVE ─────────────────────────────────────────────────────
+        if (isBrilliant) {
+            const msgText = this.personality.getMessageForMove(this.currentIndex, 'BRILLIANT', false);
+            this.say(msgText, 'HAPPY', this.isAutoPlaying);
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2200);
+            return;
+        }
+
+        // ── DECISIVE ADVANTAGE STATE CHANGED ───────────────────────────────────
+        const currentAbsEval = Math.abs(this.currentEval);
+        const currentIsDecisive = currentAbsEval > 350; // +3.5 is decisive
+        const currentWhiteLeads = this.currentEval > 0;
+        const currentDecisiveState = currentIsDecisive ? (currentWhiteLeads ? 'WHITE' : 'BLACK') : null;
+
+        const prevAbsEval = Math.abs(prevEval);
+        const prevIsDecisive = prevAbsEval > 350;
+        const prevWhiteLeads = prevEval > 0;
+        const prevDecisiveState = prevIsDecisive ? (prevWhiteLeads ? 'WHITE' : 'BLACK') : null;
+
+        const decisiveStateChanged = currentDecisiveState && currentDecisiveState !== prevDecisiveState;
+
+        if (decisiveStateChanged) {
+            const msg = this.personality.getPoolMessage(currentWhiteLeads ? 'DECISIVE_WHITE' : 'DECISIVE_BLACK', this.currentIndex);
+            this.say(msg, 'NEUTRAL', this.isAutoPlaying);
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
+            return;
+        }
+
+        // ── ENDGAME: comment on significant advantage / threats ────────────────
+        if (isEndgame) {
+            const evalSwing = Math.abs(diff);
+            if (evalSwing > 200) {
+                const msg = this.personality.getPoolMessage('ENDGAME_TENSION', this.currentIndex);
+                this.say(msg, 'NEUTRAL', this.isAutoPlaying);
+                this.hintContainer.style.display = 'none';
+                if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2000);
+                return;
+            }
+        }
+
+        // ── SILENT MOVE: advance without commentary ────────────────────────────
+        this.hintContainer.style.display = 'none';
+        if (this.isAutoPlaying) {
+            this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 1000);
+        }
+    }
+
+    /** Detects endgame by counting major/minor pieces remaining */
+    _isEndgamePosition() {
+        let count = 0;
+        this.game.board().forEach(row =>
+            row.forEach(sq => { if (sq && sq.type !== 'p' && sq.type !== 'k') count++; })
+        );
+        return count <= 6;
+    }
+
+
+    // ─── EVAL BAR ────────────────────────────────────────────────────────────
+
+    updateEvalBar(cp, mateIn = null) {
+        const evalValueEl = document.getElementById('eval-value');
+
+        if (mateIn !== null) {
+            const absMate = Math.abs(mateIn);
+            const sign = mateIn > 0
+                ? (this.game.turn() === 'w' ? '+' : '-')
+                : (this.game.turn() === 'w' ? '-' : '+');
+            evalValueEl.innerText = `${sign}M${absMate}`;
+            // Fill bar completely for the winning side
+            const winnerIsWhite = cp > 0;
+            this.evalFill.style.height = winnerIsWhite ? '100%' : '0%';
+            this.evalFill.style.background = winnerIsWhite ? 'white' : '#1a1a1a';
+            return;
+        }
+
+        let displayScore = (cp / 100).toFixed(1);
+        evalValueEl.innerText = (cp > 0 ? "+" : "") + displayScore;
+
+        // Map centipawns to bar: 0cp = 50%, each 50cp = ~5% (caps at 5-95%)
+        let percent = 50 + (cp / 1000) * 50;
+        percent = Math.max(2, Math.min(98, percent));
+        this.evalFill.style.height = `${percent}%`;
+
+        if (cp > 150) this.evalFill.style.background = 'white';
+        else if (cp < -150) this.evalFill.style.background = '#1a1a1a';
+        else this.evalFill.style.background = 'linear-gradient(to top, #444, #ddd)';
+    }
+
+    // ─── MOVE NAVIGATION ─────────────────────────────────────────────────────
+
+    goToMove(index) {
+        if (index < -1 || index >= this.history.length) return;
+
+        // If in hint mode, restore state first
+        if (this.isShowingHint) {
+            this.isShowingHint = false;
+            // No need to revert visually here; renderBoard at bottom will do it
+        }
+        
+        this.hintContainer.style.display = 'none';
+        this.wasAutoPlaying = false;
+
+        if (this.isAnalyzingFullGame) {
+            this.isAnalyzingFullGame = false;
+            this.whispererText.innerText = "Análisis pausado. Navegando la partida.";
+        }
+
+        this.currentIndex = index;
+        this.game.reset();
+        for (let i = 0; i <= index; i++) this.game.move(this.history[i].san);
+
+        this.renderBoard();
+        this.updateActiveMove();
+        this.engine.stop();
+        this.engine.analyzePosition(this.game.fen(), 12);
+    }
+
+    // ─── HINT: show PV on board then restore ─────────────────────────────────
+
+    promptHint() {
+        this.hintContainer.style.display = 'flex';
+        this.hintMsg.innerText = "¿Ver sugerencia del módulo?";
+        this.btnHintYes.innerText = 'Sí';
+        this.btnHintYes.style.background = 'var(--success)';
+        this.btnHintNo.style.display = 'block';
+        
+        if (this.isAutoPlaying) {
+            this.wasAutoPlaying = true;
+            this.toggleAutoPlay(); // Pauses auto-play
+        } else {
+            this.wasAutoPlaying = false;
+        }
+    }
+
+    handleHintNo() {
+        this.hintContainer.style.display = 'none';
+        if (this.wasAutoPlaying && !this.isAutoPlaying) {
+            this.toggleAutoPlay(); // Resumes auto-play
+        }
+    }
+
+    async handleHintYes() {
+        if (this.isShowingHint || this.currentBestPV.length === 0) return;
+
+        this.isShowingHint = true;
+        this.hintReturnIndex = this.currentIndex;
+        this.hintContainer.style.display = 'none';
+
+        // Play up to 3 moves of the PV temporarily
+        const pvMoves = this.currentBestPV.slice(0, 3);
+        const tempGame = new Chess(this.game.fen());
+        const tempHistory = [];
+        const sanMoves = [];
+
+        for (const uciMove of pvMoves) {
+            const from = uciMove.substring(0, 2);
+            const to = uciMove.substring(2, 4);
+            const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
+            try {
+                const result = tempGame.move({ from, to, promotion });
+                if (result) {
+                    tempHistory.push(result);
+                    sanMoves.push(result.san);
+                }
+            } catch (e) {}
+        }
+
+        this.say(`Variante sugerida: ${sanMoves.map(san => this._sanToSpanish(san)).join(' → ')}.`);
+
+        // Animate the moves on the board
+        const animGame = new Chess(this.game.fen());
+        const animHistory = [];
+        
+        for (let i = 0; i < tempHistory.length; i++) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+            // Check if user manually navigated away during animation
+            if (!this.isShowingHint) return;
+            animGame.move(tempHistory[i].san);
+            animHistory.push(tempHistory[i]);
+            this._renderGameState(animGame, animHistory);
+        }
+
+        // Wait 3 seconds after the sequence completes
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // If still in hint mode, auto-close it
+        if (this.isShowingHint) {
+            this.handleHintReturn();
+        }
+    }
+
+    handleHintReturn() {
+        this.isShowingHint = false;
+        const autoResume = this.wasAutoPlaying && !this.isAutoPlaying;
+        
+        if (autoResume) {
+            this.hintContainer.style.display = 'none';
+            this.wasAutoPlaying = false;
+            this.currentIndex = this.hintReturnIndex;
+            this.toggleAutoPlay();
+        } else {
+            this.goToMove(this.hintReturnIndex);
+        }
+    }
+
+    _sanToSpanish(san) {
+        return san.replace(/N/g, 'C')
+                  .replace(/B/g, 'A')
+                  .replace(/R/g, 'T')
+                  .replace(/Q/g, 'D')
+                  .replace(/K/g, 'R');
+    }
+
+    _renderGameState(chessInstance, highlightMoves) {
+        this.boardElement.innerHTML = '';
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        const displayRanks = this.isFlipped ? [...ranks].reverse() : ranks;
+        const displayFiles = this.isFlipped ? [...files].reverse() : files;
+
+        const highlightSquares = new Set();
+        if (highlightMoves.length > 0) {
+            highlightMoves.forEach(m => {
+                highlightSquares.add(m.from);
+                highlightSquares.add(m.to);
+            });
+        }
+
+        displayRanks.forEach((rank, rIdx) => {
+            displayFiles.forEach((file, fIdx) => {
+                const square = document.createElement('div');
+                const isDark = (rIdx + fIdx) % 2 !== 0;
+                square.className = `square ${isDark ? 'dark' : 'light'}`;
+                square.dataset.square = `${file}${rank}`;
+                if (fIdx === 0) { square.classList.add('rank-label'); square.setAttribute('data-rank', rank); }
+                if (rIdx === 7) { square.classList.add('file-label'); square.setAttribute('data-file', file); }
+
+                const piece = chessInstance.get(`${file}${rank}`);
+                if (piece) {
+                    const pieceImg = document.createElement('img');
+                    pieceImg.src = `https://lichess1.org/assets/piece/cburnett/${piece.color}${piece.type.toUpperCase()}.svg`;
+                    pieceImg.className = 'piece';
+                    square.appendChild(pieceImg);
+                }
+                if (highlightSquares.has(`${file}${rank}`)) square.classList.add('hint-from');
+                this.boardElement.appendChild(square);
+            });
+        });
+    }
+
+    // ─── BOARD RENDERING ─────────────────────────────────────────────────────
+
+    renderBoard() {
+        this.boardElement.innerHTML = '';
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        const displayRanks = this.isFlipped ? [...ranks].reverse() : ranks;
+        const displayFiles = this.isFlipped ? [...files].reverse() : files;
+
+        displayRanks.forEach((rank, rIdx) => {
+            displayFiles.forEach((file, fIdx) => {
+                const square = document.createElement('div');
+                const isDark = (rIdx + fIdx) % 2 !== 0;
+                square.className = `square ${isDark ? 'dark' : 'light'}`;
+                square.dataset.square = `${file}${rank}`;
+                if (fIdx === 0) { square.classList.add('rank-label'); square.setAttribute('data-rank', rank); }
+                if (rIdx === 7) { square.classList.add('file-label'); square.setAttribute('data-file', file); }
+
+                const piece = this.game.get(`${file}${rank}`);
+                if (piece) {
+                    const pieceImg = document.createElement('img');
+                    pieceImg.src = `https://lichess1.org/assets/piece/cburnett/${piece.color}${piece.type.toUpperCase()}.svg`;
+                    pieceImg.className = 'piece';
+                    square.appendChild(pieceImg);
+                }
+                if (this.currentIndex >= 0) {
+                    const lastMove = this.history[this.currentIndex];
+                    if (lastMove?.from === `${file}${rank}` || lastMove?.to === `${file}${rank}`) {
+                        square.classList.add('last-move');
+                    }
+                }
+                this.boardElement.appendChild(square);
+            });
+        });
+    }
+
+    flipBoard() { this.isFlipped = !this.isFlipped; this.renderBoard(); }
+
+    // ─── MOVES LIST ───────────────────────────────────────────────────────────
 
     toSpanishSAN(san) {
         const map = { 'K': 'R', 'Q': 'D', 'R': 'T', 'B': 'A', 'N': 'C' };
@@ -263,155 +799,22 @@ class GrandmasterWhisperer {
             numEl.className = 'move-number';
             numEl.innerText = `${num}.`;
             this.movesListElement.appendChild(numEl);
-            
-            const whiteMove = this.history[i];
+
             const whiteEl = document.createElement('div');
             whiteEl.className = 'move-item';
-            whiteEl.innerText = this.toSpanishSAN(whiteMove.san);
+            whiteEl.innerText = this.toSpanishSAN(this.history[i].san);
             whiteEl.onclick = () => this.goToMove(i);
             this.movesListElement.appendChild(whiteEl);
-            
+
             const blackMove = this.history[i + 1];
+            const blackEl = document.createElement('div');
             if (blackMove) {
-                const blackEl = document.createElement('div');
                 blackEl.className = 'move-item';
                 blackEl.innerText = this.toSpanishSAN(blackMove.san);
                 blackEl.onclick = () => this.goToMove(i + 1);
-                this.movesListElement.appendChild(blackEl);
-            } else {
-                this.movesListElement.appendChild(document.createElement('div'));
             }
+            this.movesListElement.appendChild(blackEl);
         }
-    }
-
-    flipBoard() {
-        this.isFlipped = !this.isFlipped;
-        this.renderBoard();
-    }
-
-    renderBoard() {
-        this.boardElement.innerHTML = '';
-        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
-        const displayRanks = this.isFlipped ? [...ranks].reverse() : ranks;
-        const displayFiles = this.isFlipped ? [...files].reverse() : files;
-        displayRanks.forEach((rank, rIdx) => {
-            displayFiles.forEach((file, fIdx) => {
-                const square = document.createElement('div');
-                const isDark = (rIdx + fIdx) % 2 !== 0;
-                square.className = `square ${isDark ? 'dark' : 'light'}`;
-                square.dataset.square = `${file}${rank}`;
-                if (fIdx === 0) { square.classList.add('rank-label'); square.setAttribute('data-rank', rank); }
-                if (rIdx === 7) { square.classList.add('file-label'); square.setAttribute('data-file', file); }
-                const piece = this.game.get(`${file}${rank}`);
-                if (piece) {
-                    const pieceImg = document.createElement('img');
-                    pieceImg.src = `https://lichess1.org/assets/piece/cburnett/${piece.color}${piece.type.toUpperCase()}.svg`;
-                    pieceImg.className = 'piece';
-                    square.appendChild(pieceImg);
-                }
-                if (this.currentIndex >= 0) {
-                    const lastMove = this.history[this.currentIndex];
-                    if (lastMove.from === `${file}${rank}` || lastMove.to === `${file}${rank}`) {
-                        square.classList.add('last-move');
-                    }
-                }
-                this.boardElement.appendChild(square);
-            });
-        });
-    }
-
-    handleEngineInfo(msg) {
-        const cpMatch = msg.match(/score cp (-?\d+)/);
-        const mateMatch = msg.match(/score mate (-?\d+)/);
-        let score = 0;
-        if (cpMatch) {
-            const cp = parseInt(cpMatch[1]);
-            score = this.game.turn() === 'w' ? cp : -cp;
-        } else if (mateMatch) {
-            const mateIn = parseInt(mateMatch[1]);
-            score = (this.game.turn() === 'w' ? 1 : -1) * (mateIn > 0 ? 10000 : -10000);
-        }
-        this.currentEval = score;
-        this.updateEvalBar(score);
-        const pvMatch = msg.match(/ pv (.*)/);
-        if (pvMatch) this.currentBestMove = pvMatch[1].split(' ')[0];
-    }
-
-    updateEvalBar(cp) {
-        const evalValueEl = document.getElementById('eval-value');
-        let displayScore = (cp / 100).toFixed(1);
-        if (cp > 1000) displayScore = "M" + Math.round((10000 - cp) / 100);
-        if (cp < -1000) displayScore = "-M" + Math.round((10000 + cp) / 100);
-        evalValueEl.innerText = (cp > 0 ? "+" : "") + displayScore;
-        let percent = 50 + (cp / 20);
-        percent = Math.max(5, Math.min(95, percent));
-        this.evalFill.style.height = `${percent}%`;
-        if (cp > 100) this.evalFill.style.background = 'white';
-        else if (cp < -100) this.evalFill.style.background = '#333';
-        else this.evalFill.style.background = 'linear-gradient(to top, #333, white)';
-    }
-
-    handleBestMove(msg) {
-        if (this.currentIndex < 0) return;
-        
-        if (this.isAnalyzingFullGame) {
-            if (!this.isAnalyzingFullGame) return;
-            this.analysisResults[this.currentIndex + 1] = this.currentEval;
-            if (this.currentIndex >= 0) {
-                const prevEval = this.analysisResults[this.currentIndex];
-                const actualMove = this.history[this.currentIndex];
-                if (actualMove) {
-                    const side = actualMove.color;
-                    const diff = side === 'w' ? (prevEval - this.currentEval) : (this.currentEval - prevEval);
-                    if (diff > 250) {
-                        this.say(`¡Atención! Error grave en la jugada ${this.currentIndex + 1}.`, "SURPRISED");
-                    } else if ((this.currentIndex + 1) % 5 === 0) {
-                        this.whispererText.innerText = `Analizando profundamente... voy por la jugada ${this.currentIndex + 1}.`;
-                    }
-                }
-            }
-            this.analyzeNextMoveInGame();
-            return;
-        }
-
-        const actualMove = this.history[this.currentIndex];
-        if (!actualMove) return;
-        
-        const side = actualMove.color;
-        const prevEval = this.analysisResults[this.currentIndex] || 0;
-        const diff = side === 'w' ? (prevEval - this.currentEval) : (this.currentEval - prevEval);
-        const isOpening = this.currentIndex < 12;
-        const analysis = this.personality.analyzeMove(diff, side, isOpening, this.history.slice(0, this.currentIndex + 1));
-        const msgText = this.personality.getMessage(analysis.category, analysis.isOpponent, analysis.openingName);
-        this.say(msgText, analysis.mood);
-
-        if (analysis.category === 'BLUNDER' || analysis.category === 'INACCURACY') {
-            this.hintBtn.style.display = 'block';
-        }
-
-        if (this.isAutoPlaying) {
-            const delay = (analysis.category === 'BLUNDER' || analysis.category === 'INACCURACY') ? 6000 : 1500;
-            this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), delay);
-        }
-    }
-
-    goToMove(index) {
-        if (index < -1 || index >= this.history.length) return;
-        if (this.isAnalyzingFullGame) {
-            this.isAnalyzingFullGame = false;
-            this.say("Análisis interrumpido. Sigamos con esta posición.", "NEUTRAL");
-        }
-        this.currentIndex = index;
-        this.game.reset();
-        for (let i = 0; i <= index; i++) {
-            this.game.move(this.history[i].san);
-        }
-        this.renderBoard();
-        this.updateActiveMove();
-        this.hintBtn.style.display = 'none';
-        this.engine.stop();
-        this.engine.analyzePosition(this.game.fen());
     }
 
     updateActiveMove() {
@@ -419,27 +822,82 @@ class GrandmasterWhisperer {
         moveEls.forEach((el, i) => el.classList.toggle('active', i === this.currentIndex));
     }
 
-    showHint() {
-        if (!this.currentBestMove) return;
-        const from = this.currentBestMove.substring(0, 2);
-        const to = this.currentBestMove.substring(2, 4);
-        const squares = this.boardElement.querySelectorAll('.square');
-        squares.forEach(sq => {
-            if (sq.dataset.square === from) sq.classList.add('hint-from');
-            if (sq.dataset.square === to) sq.classList.add('hint-to');
-        });
+    // ─── AUTOPLAY ────────────────────────────────────────────────────────────
+
+    toggleAutoPlay() {
+        this.isAutoPlaying = !this.isAutoPlaying;
+        const btn = document.getElementById('btn-autoplay');
+        if (this.isAutoPlaying) {
+            // Guard: don't start autoplay if there's no loaded game
+            if (this.history.length === 0) {
+                this.isAutoPlaying = false;
+                this.say('Carga una partida primero para usar el modo automático.', 'NEUTRAL', false);
+                return;
+            }
+            btn.innerText = '⏸ Stop';
+            btn.classList.add('pulse');
+            // If we're already at the end, restart from beginning
+            const nextIndex = this.currentIndex >= this.history.length - 1
+                ? 0
+                : this.currentIndex + 1;
+            this.goToMove(nextIndex);
+        } else {
+            btn.innerText = '▶ Auto';
+            btn.classList.remove('pulse');
+            clearTimeout(this.autoPlayTimeout);
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+        }
     }
 
-    say(text, mood = 'NEUTRAL') {
+    nextAutoStep() {
+        if (!this.isAutoPlaying) return;
+        if (this.currentIndex >= this.history.length - 1) {
+            this.toggleAutoPlay();
+            return;
+        }
+        this.goToMove(this.currentIndex + 1);
+    }
+
+    // ─── ACCURACY ────────────────────────────────────────────────────────────
+
+    calculateAccuracy() {
+        let whiteLosses = [], blackLosses = [];
+        for (let i = 1; i < this.analysisResults.length; i++) {
+            const prev = this.analysisResults[i - 1];
+            const curr = this.analysisResults[i];
+            const side = this.history[i - 1]?.color;
+            // Cap loss at 500cp to avoid blunders skewing the whole result
+            const loss = Math.min(500, Math.max(0, side === 'w' ? (prev - curr) : (curr - prev)));
+            if (side === 'w') whiteLosses.push(loss);
+            else blackLosses.push(loss);
+        }
+        const avgW = whiteLosses.length ? whiteLosses.reduce((a, b) => a + b, 0) / whiteLosses.length : 0;
+        const avgB = blackLosses.length ? blackLosses.reduce((a, b) => a + b, 0) / blackLosses.length : 0;
+        const accWhite = Math.max(0, Math.min(100, 100 - (avgW / 5)));
+        const accBlack = Math.max(0, Math.min(100, 100 - (avgB / 5)));
+
+        document.getElementById('acc-white').innerText = `⬜ ${accWhite.toFixed(1)}%`;
+        document.getElementById('acc-black').innerText = `⬛ ${accBlack.toFixed(1)}%`;
+        this.accuracyReport.style.display = 'block';
+
+        const finalComment = this.personality.getFinalCommentary(accWhite, accBlack, this.history.length);
+        // Final report always speaks (auto-play just ended)
+        this.say(`Análisis completo. Blancas: ${accWhite.toFixed(1)}% | Negras: ${accBlack.toFixed(1)}%. ${finalComment}`, "HAPPY", true);
+    }
+
+    // ─── SAY ─────────────────────────────────────────────────────────────────
+    // speak=true → use TTS (only during auto-play or critical moments)
+    // speak=false → update text silently (manual navigation)
+
+    say(text, mood = 'NEUTRAL', speak = false) {
         this.whispererText.innerText = text;
         const bubble = document.querySelector('.speech-bubble');
         bubble.classList.remove('pulse');
         void bubble.offsetWidth;
         bubble.classList.add('pulse');
-        this.personality.speak(text);
+        if (speak) this.personality.speak(text);
+        else if (window.speechSynthesis) window.speechSynthesis.cancel();
     }
 }
 
-window.addEventListener('load', () => {
-    new GrandmasterWhisperer();
-});
+window.addEventListener('load', () => { new GrandmasterWhisperer(); });

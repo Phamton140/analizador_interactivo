@@ -7,38 +7,206 @@ export const TRAINERS = {
     }
 };
 
-const FAMOUS_QUOTES = {
-    CENTER: [
-        "\"El centro es el corazón del tablero.\" - Philidor",
-        "\"Quien domine el centro, dominará la partida.\" - Nimzowitsch",
-        "\"Los peones son el alma del ajedrez.\" - Philidor"
-    ],
-    TENSION: [
-        "\"La amenaza es más fuerte que la ejecución.\" - Spielmann",
-        "\"En el ajedrez, como en la vida, la mejor defensa es un buen ataque.\""
-    ],
-    ERROR: [
-        "\"El error es el padre de la victoria.\" - Savielly Tartakower",
-        "\"Aquel que comete el penúltimo error gana la partida.\" - Savielly Tartakower"
-    ],
-    DEVELOPMENT: [
-        "\"Desarrolla tus piezas antes de atacar.\" - Lasker",
-        "\"Cada pieza tiene un propósito, no la dejes durmiendo.\""
-    ]
+const OPENING_BOOK = {
+    // Siciliana
+    "e4 c5": "Defensa Siciliana",
+    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": "Defensa Siciliana variante Najdorf",
+    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6": "Defensa Siciliana variante Dragón",
+    "e4 c5 Nf3 e6": "Defensa Siciliana variante Francesa",
+    "e4 c5 c3": "Defensa Siciliana variante Alapin",
+    "e4 c5 Nf3 Nc6": "Defensa Siciliana variante Pelikán",
+    "e4 c5 Nc3": "Defensa Siciliana Cerrada",
+    "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6": "Defensa Siciliana Clásica",
+    "e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6": "Defensa Siciliana variante Kan",
+    "e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nf6 Nc3 Bb4": "Defensa Siciliana variante Taimanov",
+    "e4 c5 Nf3 d6 Bb5+": "Defensa Siciliana Ataque Canal-Sokolsky",
+
+    // Ruy Lopez / Española
+    "e4 e5 Nf3 Nc6 Bb5": "Apertura Española (Ruy López)",
+    "e4 e5 Nf3 Nc6 Bb5 a6": "Apertura Española variante Morphy",
+    "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7": "Apertura Española Cerrada",
+    "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Nxe4": "Apertura Española Abierta",
+    "e4 e5 Nf3 Nc6 Bb5 Nf6": "Apertura Española Defensa Berlinesa",
+    "e4 e5 Nf3 Nc6 Bb5 a6 Bxc6": "Apertura Española variante del Cambio",
+
+    // Italiana
+    "e4 e5 Nf3 Nc6 Bc4": "Apertura Italiana",
+    "e4 e5 Nf3 Nc6 Bc4 Bc5": "Giuoco Piano",
+    "e4 e5 Nf3 Nc6 Bc4 Bc5 c3": "Giuoco Pianissimo",
+    "e4 e5 Nf3 Nc6 Bc4 Bc5 b4": "Gambito Evans",
+    "e4 e5 Nf3 Nc6 Bc4 Nf6": "Defensa de los Dos Caballos",
+    "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5": "Ataque Fegatello",
+
+    // Francesa
+    "e4 e6": "Defensa Francesa",
+    "e4 e6 d4 d5": "Defensa Francesa Clásica",
+    "e4 e6 d4 d5 e5": "Defensa Francesa variante del Avance",
+    "e4 e6 d4 d5 exd5": "Defensa Francesa variante del Cambio",
+    "e4 e6 d4 d5 Nd2": "Defensa Francesa variante Tarrasch",
+    "e4 e6 d4 d5 Nc3": "Defensa Francesa variante Paulsen/Winawer",
+    "e4 e6 d4 d5 Nc3 Bb4": "Defensa Francesa variante Winawer",
+
+    // Caro-Kann
+    "e4 c6": "Defensa Caro-Kann",
+    "e4 c6 d4 d5": "Defensa Caro-Kann Clásica",
+    "e4 c6 d4 d5 e5": "Defensa Caro-Kann variante del Avance",
+    "e4 c6 d4 d5 exd5 cxd5 Bd3": "Defensa Caro-Kann variante del Cambio",
+    "e4 c6 d4 d5 Nd2 dxe4 Nxe4 Bf5": "Defensa Caro-Kann variante Capablanca",
+    "e4 c6 d4 d5 Nd2 dxe4 Nxe4 Nd7": "Defensa Caro-Kann variante Karpov",
+
+    // Otras e4
+    "e4 e5": "Juego Abierto",
+    "e4 e5 Nf3 Nc6 d4": "Apertura Escocesa",
+    "e4 e5 Nf3 Nc6 d4 exd4 Nxd4": "Apertura Escocesa Clásica",
+    "e4 e5 Nf3 Nc6 Bc4 Be7": "Defensa Húngara",
+    "e4 e5 f4": "Gambito de Rey",
+    "e4 e5 f4 exf4": "Gambito de Rey Aceptado",
+    "e4 e5 f4 d5": "Gambito de Rey Rehusado",
+    "e4 d5": "Defensa Escandinava",
+    "e4 d5 exd5 Qxd5": "Defensa Escandinava Clásica",
+    "e4 Nf6": "Defensa Alekhine",
+    "e4 d6 d4 Nf6": "Defensa Pirc",
+    "e4 g6": "Defensa Moderna",
+    "e4 e5 Nc3": "Apertura Vienesa",
+    "e4 e5 Bc4": "Apertura de Alfil",
+    "e4 c5 d4": "Gambito Morra",
+
+    // Gambito de Dama & Cerradas
+    "d4 d5": "Apertura de Peón de Dama",
+    "d4 d5 c4": "Gambito de Dama",
+    "d4 d5 c4 dxc4": "Gambito de Dama Aceptado",
+    "d4 d5 c4 e6": "Gambito de Dama Rehusado",
+    "d4 d5 c4 c6": "Defensa Eslava",
+    "d4 d5 c4 c6 Nc3 Nf6 Nf3 dxc4": "Defensa Eslava Principal",
+    "d4 d5 c4 e6 Nc3 c6": "Defensa Semieslava",
+    "d4 d5 c4 e6 Nc3 c6 Nf3 Nf6 e3 Nbd7 Bd3 dxc4 Bxc4 b5": "Defensa Semieslava variante Merano",
+    "d4 Nf6 c4 c5": "Defensa Benoni",
+    "d4 Nf6 c4 c5 d5": "Defensa Benoni Moderna",
+    "d4 Nf6 c4 c5 d5 b5": "Gambito Benko",
+
+    // Indias
+    "d4 Nf6": "Defensa India",
+    "d4 Nf6 c4 e6": "Defensa India Oriental",
+    "d4 Nf6 c4 e6 Nc3 Bb4": "Defensa Nimzo-India",
+    "d4 Nf6 c4 e6 Nf3 b6": "Defensa India de Dama",
+    "d4 Nf6 c4 e6 g3": "Apertura Catalana",
+    "d4 Nf6 c4 g6": "Defensa India de Rey",
+    "d4 Nf6 c4 g6 Nc3 Bg7": "Defensa India de Rey Clásica",
+    "d4 Nf6 c4 g6 Nc3 d5": "Defensa Grünfeld",
+    "d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5 e4 Nxc3 bxc3": "Defensa Grünfeld variante del Cambio",
+
+    // Otras de d4
+    "d4 f5": "Defensa Holandesa",
+    "d4 f5 g3": "Defensa Holandesa variante Leningrado",
+    "d4 f5 c4 Nf6 g3 e6 Bg2 Be7": "Defensa Holandesa Muro de Piedra",
+    "d4 d5 Bf4": "Sistema Londres",
+    "d4 Nf6 Nf3 g6 Bf4": "Sistema Londres",
+    "d4 Nf6 Bg5": "Ataque Trompowsky",
+    "d4 d5 Bg5": "Ataque Trompowsky",
+    
+    // Flanco
+    "c4": "Apertura Inglesa",
+    "c4 e5": "Apertura Inglesa Simétrica Invertida",
+    "c4 c5": "Apertura Inglesa Simétrica",
+    "Nf3": "Apertura Reti",
+    "Nf3 d5 g3": "Ataque Indio de Rey",
+    "b3": "Apertura Larsen",
+    "b4": "Apertura Sokolsky",
+    "f4": "Apertura Bird",
+    "g3": "Apertura Benko / Húngara"
 };
 
-const OPENING_BOOK = {
-    "e4 e5 Nf3 Nc6 Bc4 Bc5": "Apertura Italiana",
-    "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5": "Ataque Fried Liver (Fegatello)",
-    "e4 e6": "Defensa Francesa",
-    "e4 c5": "Defensa Siciliana",
-    "e4 e5 Nf3 Nc6 Bb5": "Apertura Ruy López (Española)",
-    "d4 d5 c4": "Gambito de Dama",
-    "e4 c6": "Defensa Caro-Kann",
-    "e4 g6": "Defensa Moderna",
-    "d4 Nf6 c4 g6 Nc3 Bg7": "Defensa India de Rey",
-    "e4 e5 Nf3 Nc6 d4": "Apertura Escocesa",
-    "e3": "Apertura Van't Kruijs (Ocupando el centro tímidamente...)"
+// Message pools per category — deterministic by moveIndex to avoid repeats
+const MESSAGES = {
+    BLUNDER_OWN: [
+        "Error crítico. El motor identifica una pérdida de ventaja significativa.",
+        "Jugada imprecisa. Esta posición era ganadora; era importante mantener la presión.",
+        "Tácticamente comprometido. El rival tiene una respuesta contundente aquí.",
+        "Pérdida de material o posición. El análisis señala una variante superior.",
+        "Esta jugada cede la iniciativa. Revisar la variante del motor es clave."
+    ],
+    BLUNDER_OPP: [
+        "¡Error del rival! Se abre una ventaja táctica que hay que capitalizar.",
+        "¡Excelente oportunidad! El oponente ha cometido un error decisivo.",
+        "El rival cedió material. Una respuesta precisa consolida la ventaja.",
+        "Jugada inexacta del oponente. El motor muestra una ganancia concreta aquí.",
+        "¡Ventaja táctica! El rival no encontró la jugada correcta en esta posición."
+    ],
+    INACCURACY_OWN: [
+        "Jugada subóptima. Existía una continuación más precisa en esta posición.",
+        "Imprecisión moderada. La ventaja se redujo ligeramente.",
+        "El motor señala una idea superior. Vale la pena estudiar la variante.",
+        "Potencial desaprovechado. Había una jugada más activa disponible.",
+        "Jugada aceptable, pero no la más fuerte. El análisis lo detalla."
+    ],
+    INACCURACY_OPP: [
+        "El oponente no encontró la mejor jugada. La posición favorece tu bando.",
+        "Imprecisión del rival. Mantén la presión y no le des respiro.",
+        "El rival cedió la iniciativa. Aprovecha el tempo ganado.",
+        "Oportunidad creada por un error menor del oponente. Actúa con precisión.",
+        "El rival jugó de forma pasiva. Toma el control del juego."
+    ],
+    BRILLIANT: [
+        "¡Jugada excepcional! Coincide con la primera opción de Stockfish.",
+        "Movimiento preciso. Esta jugada es la que elegiría un gran maestro.",
+        "¡Perfecto! Ni el propio Stockfish encontraría una respuesta superior.",
+        "Jugada de alta calidad. El motor la evalúa como la mejor continuación posible.",
+        "¡Exacta! Esta jugada optimiza completamente la posición."
+    ],
+    OPENING: [
+        "Desarrollo sólido. Los principios de apertura se cumplen correctamente.",
+        "Control central. Una buena base para el mediojuego.",
+        "Apertura activa. Las piezas se dirigen a sus casillas ideales.",
+        "Fundamentos correctos. La posición ofrece buen juego.",
+        "Coherente con los principios clásicos de apertura."
+    ],
+    NEUTRAL: [
+        "Posición equilibrada. Ambos bandos tienen recursos.",
+        "La tensión se mantiene. La partida está abierta a múltiples planes.",
+        "Continuación sólida. El balance se mantiene estable.",
+        "Posición compleja. Las ideas estratégicas son la clave.",
+        "Igualdad en el tablero. El próximo plan es determinante."
+    ],
+    DECISIVE_WHITE: [
+        "Ventaja decisiva para blancas. La técnica debe ser suficiente.",
+        "Blancas dominan. La posición es técnicamente ganadora.",
+        "El material y la posición favorecen claramente a blancas."
+    ],
+    DECISIVE_BLACK: [
+        "Ventaja decisiva para negras. La conversión técnica es el próximo paso.",
+        "Negras dominan. La posición es técnicamente ganadora.",
+        "El material y la posición favorecen claramente a negras."
+    ],
+    MATE_FOUND_OWN: [
+        "¡Mate en la variante! La posición es absolutamente ganadora.",
+        "Secuencia de mate detectada. La victoria está garantizada con precisión.",
+        "¡Jaque mate forzado! El motor confirma la victoria."
+    ],
+    MATE_FOUND_OPP: [
+        "El oponente tiene mate forzado. Es una posición perdida; hay que buscar complicaciones.",
+        "Secuencia de mate del rival detectada. La resistencia es la única opción.",
+        "Amenaza de mate crítica. El análisis es urgente."
+    ],
+    PUNISHED: [
+        "¡Correcto! La imprecisión del rival fue aprovechada con precisión.",
+        "Respuesta exacta al error del oponente. Eso es dominio táctico.",
+        "¡Excelente! No desaprovechaste el regalo del rival.",
+        "La ventaja fue capitalizada. Así se convierte una imprecisión ajena en puntos.",
+        "Respuesta precisa. El motor coincide con esta continuación."
+    ],
+    MISSED_CHANCE: [
+        "El rival cometió un error, pero la respuesta no fue la más fuerte disponible.",
+        "Había una continuación decisiva aquí. El error del oponente no fue castigado.",
+        "Oportunidad desaprovechada. El análisis muestra una ganancia concreta que se pasó.",
+        "El rival se equivocó, pero la partida sigue igualada. Revisar la variante del motor.",
+        "Un momento crítico no aprovechado. Estudia la jugada correcta aquí."
+    ],
+    ENDGAME_TENSION: [
+        "La posición evoluciona. Cada jugada en el final tiene peso.",
+        "El balance cambia en el final. La precisión técnica es indispensable.",
+        "El juego se profundiza. Hay que calcular con cuidado.",
+        "Momento delicado del final. Una sola imprecisión puede decidir."
+    ]
 };
 
 export class PersonalityEngine {
@@ -46,16 +214,18 @@ export class PersonalityEngine {
         this.currentTrainer = 'KING';
         this.analysisSide = 'w';
         this.lastOpeningName = "";
+        // Cache: moveIndex -> message to avoid repeats when revisiting
+        this._msgCache = {};
     }
 
     setAnalysisSide(side) {
         this.analysisSide = side;
+        // Clear cache when perspective changes
+        this._msgCache = {};
     }
 
     setTrainer(trainerId) {
-        if (TRAINERS[trainerId]) {
-            this.currentTrainer = trainerId;
-        }
+        if (TRAINERS[trainerId]) this.currentTrainer = trainerId;
     }
 
     getTrainerInfo() {
@@ -64,127 +234,104 @@ export class PersonalityEngine {
 
     getOpeningName(history) {
         const moves = history.map(m => m.san).join(' ');
+        let bestMatch = "";
+        let maxLen = 0;
         for (const [seq, name] of Object.entries(OPENING_BOOK)) {
-            if (moves.startsWith(seq)) return name;
+            if (moves.startsWith(seq) && seq.length > maxLen) {
+                bestMatch = name;
+                maxLen = seq.length;
+            }
         }
-        return "";
-    }
-
-    getFamousQuote(category) {
-        const quotes = FAMOUS_QUOTES[category] || FAMOUS_QUOTES.DEVELOPMENT;
-        return quotes[Math.floor(Math.random() * quotes.length)];
+        return bestMatch;
     }
 
     getFinalCommentary(accWhite, accBlack, numMoves) {
-        let comments = [];
-        
-        if (numMoves < 18) {
-            comments.push("¡Oye! Esto fue una miniatura... o quizás caíste en una celada. ¡Hay que estar más pendiente!");
-        }
-
+        const parts = [];
+        if (numMoves < 20) parts.push("Partida breve. Probablemente una trampa de apertura o un error temprano decisivo.");
         const diff = Math.abs(accWhite - accBlack);
         if (diff < 5) {
-            comments.push("La partida estuvo muy reñida, ambos jugaron a un nivel muy parejo. ¡Un choque de trenes!");
+            parts.push("Partida muy reñida, ambos bandos jugaron con precisión similar.");
         } else {
-            const isWhiteVictorious = accWhite > accBlack;
-            const isUserWhite = this.analysisSide === 'w';
-            
-            if ((isWhiteVictorious && isUserWhite) || (!isWhiteVictorious && !isUserWhite)) {
-                comments.push("¡Victoria aplastante! No le diste ni un respiro a tu oponente.");
-            } else {
-                comments.push("Esta derrota fue catastrófica. Tu rival te pasó por encima como una aplanadora.");
-            }
+            const whiteWon = accWhite > accBlack;
+            const userWon = (whiteWon && this.analysisSide === 'w') || (!whiteWon && this.analysisSide === 'b');
+            if (userWon) parts.push("Superioridad clara en tu juego. La presión constante hizo la diferencia.");
+            else parts.push("El rival tuvo mejor desempeño. Revisar los errores marcados ayudará a mejorar.");
         }
-
-        return comments.join(" ");
+        return parts.join(" ");
     }
 
-    getMessage(category, isOpponent, openingName) {
-        let prefix = "";
-        if (openingName && openingName !== this.lastOpeningName) {
-            this.lastOpeningName = openingName;
-            prefix = `¡Estamos ante una ${openingName}! `;
-        }
-
-        const messages = {
-            CENTER: [
-                "¡Oye! Esos peones centrales no se van a mover solos. " + this.getFamousQuote('CENTER'),
-                "¿Y el centro pa' cuándo? " + this.getFamousQuote('CENTER'),
-                "¡Concho! Ocupa el centro, que ahí es que está la fiesta."
-            ],
-            BLUNDER: isOpponent ? [
-                "¡Tu oponente se fue de boca! No vio que acabas de ganarle una pieza.",
-                "¡Oye eso! Tu oponente acaba de regalarte la partida. " + this.getFamousQuote('ERROR'),
-                "¡Ay mi madre! Tu rival se acaba de equivocar feo. ¡Duro ahí!"
-            ] : [
-                "¡Ay mi madre! Ese movimiento dolió hasta aquí. " + this.getFamousQuote('ERROR'),
-                "¿Viste eso? Acabas de regalar la dama. " + this.getFamousQuote('ERROR'),
-                "Eso no fue un error, fue un crimen táctico. ¡Llamen a la policía del ajedrez!"
-            ],
-            BRILLIANT: isOpponent ? [
-                "Tu oponente jugó una de la fina ahí. Ten cuidado.",
-                "¡Cuidado! Tu rival sacó un truco debajo de la manga.",
-                "Esa jugada de tu oponente tiene veneno. Mírala bien."
-            ] : [
-                "¡Wao! Ni Stockfish lo hubiera pensado mejor. " + this.getFamousQuote('DEVELOPMENT'),
-                "¡Qué clase! Esa jugada tiene perfume de gran maestro. ¡Duro ahí!",
-                "¡Abusador! Le diste en la madre con esa. ¡Eso es ajedrez de verdad!"
-            ],
-            INACCURACY: isOpponent ? [
-                "Tu oponente no jugó la mejor ahí. Puedes castigarlo.",
-                "Esa jugada de tu rival es como un café frío. " + this.getFamousQuote('TENSION'),
-                "Tu rival se está ablandando. ¡Presiona!"
-            ] : [
-                "Pudiste hacerlo mejor. " + this.getFamousQuote('TENSION'),
-                "Hay mejores opciones. Estás dejando que se te escape la ventaja.",
-                "Eso fue un 'bulto'. Mucho movimiento y poca sustancia."
-            ],
-            NEUTRAL: [
-                "Seguimos en la pelea. Mantén la concentración.",
-                "Posición equilibrada. El que parpadee pierde.",
-                "Tranquilo, que todavía hay juego. No te me sofoques."
-            ]
-        };
-
-        const catMessages = messages[category] || messages.NEUTRAL;
-        const mainMsg = catMessages[Math.floor(Math.random() * catMessages.length)];
-        return prefix + mainMsg;
+    // Deterministic pick from pool — same moveIndex always gets same msg
+    _pick(pool, moveIndex) {
+        return pool[moveIndex % pool.length];
     }
 
-    analyzeMove(diff, sideMoved, isOpening, history) {
+    getMessageForMove(moveIndex, category, isOpponent, mateIn = null) {
+        const cacheKey = `${moveIndex}_${category}_${isOpponent ? 1 : 0}`;
+        if (this._msgCache[cacheKey]) return this._msgCache[cacheKey];
+
+        let pool;
+        if (category === 'MATE_OWN')       pool = MESSAGES.MATE_FOUND_OWN;
+        else if (category === 'MATE_OPP')  pool = MESSAGES.MATE_FOUND_OPP;
+        else if (category === 'BLUNDER')   pool = isOpponent ? MESSAGES.BLUNDER_OPP   : MESSAGES.BLUNDER_OWN;
+        else if (category === 'INACCURACY')pool = isOpponent ? MESSAGES.INACCURACY_OPP : MESSAGES.INACCURACY_OWN;
+        else if (category === 'BRILLIANT') pool = MESSAGES.BRILLIANT;
+        else if (category === 'OPENING')   pool = MESSAGES.OPENING;
+        else if (category === 'DECISIVE_WHITE') pool = MESSAGES.DECISIVE_WHITE;
+        else if (category === 'DECISIVE_BLACK') pool = MESSAGES.DECISIVE_BLACK;
+        else pool = MESSAGES.NEUTRAL;
+
+        const msg = this._pick(pool, moveIndex);
+        this._msgCache[cacheKey] = msg;
+        return msg;
+    }
+
+    /** Gets a message from a named pool deterministically (no caching — used for contextual comments) */
+    getPoolMessage(poolName, moveIndex) {
+        const pool = MESSAGES[poolName];
+        if (!pool) return '';
+        return this._pick(pool, moveIndex);
+    }
+
+    analyzeMove(diff, cp, sideMoved, isOpening, history, moveIndex) {
         const isUserSide = sideMoved === this.analysisSide;
         const openingName = this.getOpeningName(history);
-        
-        if (diff > 300) return { mood: 'ANGRY', category: 'BLUNDER', isOpponent: !isUserSide, openingName };
-        if (diff > 100) return { mood: 'SURPRISED', category: 'INACCURACY', isOpponent: !isUserSide, openingName };
-        if (diff < -50) return { mood: 'HAPPY', category: 'BRILLIANT', isOpponent: !isUserSide, openingName };
-        
-        if (openingName && openingName !== this.lastOpeningName) {
-            return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName };
+
+        // Mate detection: cp is very large positive or negative
+        const isMate = Math.abs(cp) > 5000;
+        if (isMate) {
+            const whiteWins = cp > 0;
+            // If white wins and user is white => user has mate, opponent doesn't
+            const userHasMate = (whiteWins && this.analysisSide === 'w') || (!whiteWins && this.analysisSide === 'b');
+            const category = userHasMate ? 'MATE_OWN' : 'MATE_OPP';
+            return { mood: userHasMate ? 'HAPPY' : 'SURPRISED', category, isOpponent: !isUserSide, openingName, isMate: true };
         }
 
-        if (isOpening) return { mood: 'NEUTRAL', category: 'CENTER', isOpponent: false, openingName };
+        // Decisive advantage (5+ pawns)
+        if (Math.abs(cp) > 500) {
+            const whiteLeads = cp > 0;
+            const category = whiteLeads ? 'DECISIVE_WHITE' : 'DECISIVE_BLACK';
+            return { mood: 'NEUTRAL', category, isOpponent: false, openingName, isMate: false };
+        }
 
-        return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName };
+        // Move quality based on diff (centipawn loss for the side that moved)
+        if (diff > 300) return { mood: 'ANGRY', category: 'BLUNDER', isOpponent: !isUserSide, openingName, isMate: false };
+        if (diff > 100) return { mood: 'SURPRISED', category: 'INACCURACY', isOpponent: !isUserSide, openingName, isMate: false };
+        if (diff < -80) return { mood: 'HAPPY', category: 'BRILLIANT', isOpponent: !isUserSide, openingName, isMate: false };
+        if (isOpening) return { mood: 'NEUTRAL', category: 'OPENING', isOpponent: false, openingName, isMate: false };
+        return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName, isMate: false };
     }
 
     speak(text) {
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'es-ES';
-        
         const voices = window.speechSynthesis.getVoices();
-        // Priority for male voices in Spanish
-        const preferredVoice = voices.find(v => v.lang.startsWith('es') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('rey') || v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('raul')))
-                        || voices.find(v => v.lang.startsWith('es') && v.name.includes('male'))
-                        || voices.find(v => v.lang.startsWith('es'));
-
-        if (preferredVoice) utterance.voice = preferredVoice;
+        const preferred = voices.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('male'))
+                       || voices.find(v => v.lang.startsWith('es'));
+        if (preferred) utterance.voice = preferred;
         utterance.pitch = 0.85;
-        utterance.rate = 1.0;
-        
+        utterance.rate = 1.05;
         window.speechSynthesis.speak(utterance);
     }
 }
