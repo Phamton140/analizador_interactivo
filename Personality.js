@@ -321,10 +321,20 @@ export class PersonalityEngine {
         return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName, isMate: false };
     }
 
-    speak(text) {
-        if (!('speechSynthesis' in window)) return;
+    speak(text, onEndCallback = null) {
+        if (!('speechSynthesis' in window)) {
+            if (onEndCallback) onEndCallback();
+            return;
+        }
+        if (this._currentUtterance) {
+            this._currentUtterance.onend = null;
+            this._currentUtterance.onerror = null;
+        }
         window.speechSynthesis.cancel();
+        
         const utterance = new SpeechSynthesisUtterance(text);
+        this._currentUtterance = utterance;
+        
         utterance.lang = 'es-ES';
         const voices = window.speechSynthesis.getVoices();
         const preferred = voices.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('male'))
@@ -332,6 +342,16 @@ export class PersonalityEngine {
         if (preferred) utterance.voice = preferred;
         utterance.pitch = 0.85;
         utterance.rate = 1.05;
+        
+        if (onEndCallback) {
+            utterance.onend = () => {
+                if (this._currentUtterance === utterance) onEndCallback();
+            };
+            utterance.onerror = () => {
+                if (this._currentUtterance === utterance) onEndCallback();
+            };
+        }
+        
         window.speechSynthesis.speak(utterance);
     }
 }

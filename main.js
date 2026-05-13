@@ -403,12 +403,11 @@ class GrandmasterWhisperer {
                                          .trim();
             }
 
+            this.hintContainer.style.display = 'none';
             if (openingName && openingName !== this.personality.lastOpeningName) {
                 this.personality.lastOpeningName = openingName;
                 this.say(`${openingName}.`, 'NEUTRAL', this.isAutoPlaying);
-            }
-            this.hintContainer.style.display = 'none';
-            if (this.isAutoPlaying) {
+            } else if (this.isAutoPlaying) {
                 this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 1000);
             }
             return;
@@ -422,7 +421,6 @@ class GrandmasterWhisperer {
                 : `Fin de la fase inicial. Comienza el mediojuego.`;
             this.say(text, 'NEUTRAL', true);
             this.hintContainer.style.display = 'none';
-            this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 3000);
             return;
         }
 
@@ -455,7 +453,6 @@ class GrandmasterWhisperer {
             if (!isError && !userMissed && analysis.category === 'MATE_OWN') {
                 this.say("¡Excelente! Encontraste una jugada fuerte que mantiene la red de mate.", "HAPPY", this.isAutoPlaying);
                 this.hintContainer.style.display = 'none';
-                if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
             } else {
                 this.say(msgText, analysis.mood, this.isAutoPlaying);
                 this.promptHint();
@@ -465,10 +462,13 @@ class GrandmasterWhisperer {
 
         // ── BEST ENGINE MOVE ───────────────────────────────────────────────────
         if (isBestMove && !isOpening) {
-            this.say("¡Precisión total! Has jugado exactamente la recomendación principal del módulo.", "HAPPY", this.isAutoPlaying);
-            this.hintContainer.style.display = 'none';
-            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
-            return;
+            if (this.lastOpponentErrorIndex === this.currentIndex - 1) {
+                this.say("¡Excelente! Encontraste el movimiento clave para castigar el error del oponente.", "HAPPY", this.isAutoPlaying);
+                this.hintContainer.style.display = 'none';
+                return;
+            }
+            // If it's a best move but not punishing a recent error, we fall through.
+            // This prevents spamming "Precisión total" on every generic good move.
         }
 
         // ── ERROR MADE BY EITHER SIDE ──────────────────────────────────────────
@@ -476,16 +476,22 @@ class GrandmasterWhisperer {
             const msgText = this.personality.getMessageForMove(
                 this.currentIndex, analysis.category, analysis.isOpponent
             );
-            this.say(msgText, analysis.mood, this.isAutoPlaying);
-            this.promptHint();
+            
+            if (analysis.isOpponent) {
+                this.lastOpponentErrorIndex = this.currentIndex;
+                this.say(msgText, analysis.mood, this.isAutoPlaying);
+                this.hintContainer.style.display = 'none';
+            } else {
+                this.say(msgText, analysis.mood, this.isAutoPlaying);
+                this.promptHint();
+            }
             return;
         }
 
         // ── RESPONSE TO OPPONENT'S ERROR ───────────────────────────────────────
-        if (userPunished) {
+        if (userPunished && !isBestMove) {
             this.say(this.personality.getPoolMessage('PUNISHED', this.currentIndex), 'HAPPY', this.isAutoPlaying);
             this.hintContainer.style.display = 'none';
-            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
             return;
         }
         if (userMissed) {
@@ -499,7 +505,6 @@ class GrandmasterWhisperer {
             const msgText = this.personality.getMessageForMove(this.currentIndex, 'BRILLIANT', false);
             this.say(msgText, 'HAPPY', this.isAutoPlaying);
             this.hintContainer.style.display = 'none';
-            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2200);
             return;
         }
 
@@ -520,7 +525,6 @@ class GrandmasterWhisperer {
             const msg = this.personality.getPoolMessage(currentWhiteLeads ? 'DECISIVE_WHITE' : 'DECISIVE_BLACK', this.currentIndex);
             this.say(msg, 'NEUTRAL', this.isAutoPlaying);
             this.hintContainer.style.display = 'none';
-            if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2500);
             return;
         }
 
@@ -531,7 +535,6 @@ class GrandmasterWhisperer {
                 const msg = this.personality.getPoolMessage('ENDGAME_TENSION', this.currentIndex);
                 this.say(msg, 'NEUTRAL', this.isAutoPlaying);
                 this.hintContainer.style.display = 'none';
-                if (this.isAutoPlaying) this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 2000);
                 return;
             }
         }
@@ -895,8 +898,23 @@ class GrandmasterWhisperer {
         bubble.classList.remove('pulse');
         void bubble.offsetWidth;
         bubble.classList.add('pulse');
-        if (speak) this.personality.speak(text);
-        else if (window.speechSynthesis) window.speechSynthesis.cancel();
+        
+        clearTimeout(this.autoPlayTimeout);
+        
+        if (speak && window.speechSynthesis) {
+            const autoState = this.isAutoPlaying;
+            this.personality.speak(text, () => {
+                if (autoState && this.isAutoPlaying) {
+                    this.nextAutoStep();
+                }
+            });
+        } else {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            if (this.isAutoPlaying) {
+                const waitTime = Math.max(1500, text.length * 40);
+                this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), waitTime);
+            }
+        }
     }
 }
 
