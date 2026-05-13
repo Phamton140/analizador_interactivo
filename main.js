@@ -74,6 +74,8 @@ class GrandmasterWhisperer {
             const squareEl = e.target.closest('.square');
             if (squareEl) this.handleSquareClick(squareEl.dataset.square);
         });
+
+        document.getElementById('btn-export-pgn').addEventListener('click', () => this.exportPgn());
     }
 
     initEngine() {
@@ -961,6 +963,11 @@ class GrandmasterWhisperer {
             }
             btn.innerText = '⏸ Stop';
             btn.classList.add('pulse');
+            
+            // Enable full analysis collection so we can show accuracy at the end
+            this.isAnalyzingFullGame = true;
+            this.analysisResults = []; 
+            
             // If we're already at the end, restart from beginning
             const nextIndex = this.currentIndex >= this.history.length - 1
                 ? 0
@@ -982,6 +989,7 @@ class GrandmasterWhisperer {
         if (!this.isAutoPlaying) return;
         if (this.currentIndex >= this.history.length - 1) {
             this.toggleAutoPlay();
+            this.calculateAccuracy(); // Show percentage report when analysis finishes
             return;
         }
         this.goToMove(this.currentIndex + 1);
@@ -1045,6 +1053,39 @@ class GrandmasterWhisperer {
                 this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), waitTime);
             }
         }
+    exportPgn() {
+        if (this.history.length === 0) {
+            this.say("No hay jugadas para exportar.", "NEUTRAL", false);
+            return;
+        }
+        
+        const white = prompt("Nombre del jugador de blancas:", "Anonimo") || "Anonimo";
+        const black = prompt("Nombre del jugador de negras:", "Anonimo") || "Anonimo";
+        const result = prompt("Resultado (1-0, 0-1, 1/2-1/2, *):", this.game.header().Result || "*") || "*";
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+
+        // Set headers in chess.js
+        this.game.header(
+            'Event', 'Estudio Ordo Magnus',
+            'Site', 'Academia Ordo Magnus',
+            'Date', date,
+            'White', white,
+            'Black', black,
+            'Result', result
+        );
+
+        const pgn = this.game.pgn();
+        const blob = new Blob([pgn], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Estudio_OrdoMagnus_${date}.pgn`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.say("Partida exportada correctamente.", "HAPPY", false);
     }
 }
 

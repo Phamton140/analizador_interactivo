@@ -108,8 +108,12 @@
 
             <div class="pgn-input-area" style="flex-shrink: 0; background: rgba(255,255,255,0.02); padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
                 <p style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.3rem;">📋 Pega tu PGN o escribe jugadas (termina con *)</p>
-                <textarea id="pgn-input" placeholder="Ej: 1. e4 e5 2. Cf3* — o pega PGN estándar" style="height: 65px;"></textarea>
-                <button id="btn-analyze" style="display: none;"></button>
+                <textarea id="pgn-input" placeholder="1. e4 e5 2. Nf3..."></textarea>
+                <div style="margin-top: 0.4rem; display: flex; gap: 0.4rem;">
+                    <button id="btn-nav-upload" class="trainer-btn" style="flex: 1;">📂 Subir PGN</button>
+                    <button id="btn-export-pgn" class="trainer-btn" style="flex: 1; background: var(--accent-gold); color: var(--primary-bg);">📥 Guardar PGN</button>
+                    <input type="file" id="pgn-file" accept=".pgn" style="display: none;">
+                </div>
             </div>
         </aside>
     </main>
