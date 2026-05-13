@@ -207,6 +207,7 @@ class GrandmasterWhisperer {
         this.bestMoves = [];
         this.bestPVs = [];
         this.currentBestPV = [];
+        this.lastHintIndex = -1;
         this.isShowingHint = false;
         this.wasAutoPlaying = false;
         this.renderBoard();
@@ -269,6 +270,7 @@ class GrandmasterWhisperer {
         this.analysisResults = [0]; // position 0 = starting position = 0 cp
         this.bestMoves = []; // Initialize bestMoves array to avoid undefined errors
         this.bestPVs = []; // Store full PV arrays for each position
+        this.lastHintIndex = -1;
         this.currentIndex = -1;
         this.whispererText.innerText = "Iniciando análisis de la partida...";
         this.analyzeNextMoveInGame();
@@ -595,6 +597,10 @@ class GrandmasterWhisperer {
     goToMove(index) {
         if (index < -1 || index >= this.history.length) return;
 
+        if (index !== this.lastHintIndex && index !== this.lastHintIndex - 1) {
+            this.lastHintIndex = -1;
+        }
+
         // If in hint mode, restore state first
         if (this.isShowingHint) {
             this.isShowingHint = false;
@@ -622,6 +628,9 @@ class GrandmasterWhisperer {
     // ─── HINT: show PV on board then restore ─────────────────────────────────
 
     promptHint() {
+        if (this.lastHintIndex === this.currentIndex) return;
+        this.lastHintIndex = this.currentIndex;
+
         this.hintContainer.style.display = 'flex';
         this.hintMsg.innerText = "¿Ver sugerencia del módulo?";
         this.btnHintYes.innerText = 'Sí';
@@ -715,10 +724,10 @@ class GrandmasterWhisperer {
         if (autoResume) {
             this.hintContainer.style.display = 'none';
             this.wasAutoPlaying = false;
-            this.currentIndex = this.hintReturnIndex;
+            this.currentIndex = this.hintReturnIndex - 1;
             this.toggleAutoPlay();
         } else {
-            this.goToMove(this.hintReturnIndex);
+            this.goToMove(this.hintReturnIndex - 1);
         }
     }
 
