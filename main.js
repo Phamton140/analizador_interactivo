@@ -205,6 +205,7 @@ class GrandmasterWhisperer {
         this.allGames = [];
         this.analysisResults = [];
         this.bestMoves = [];
+        this.bestPVs = [];
         this.currentBestPV = [];
         this.isShowingHint = false;
         this.wasAutoPlaying = false;
@@ -267,6 +268,7 @@ class GrandmasterWhisperer {
         this.isAnalyzingFullGame = true;
         this.analysisResults = [0]; // position 0 = starting position = 0 cp
         this.bestMoves = []; // Initialize bestMoves array to avoid undefined errors
+        this.bestPVs = []; // Store full PV arrays for each position
         this.currentIndex = -1;
         this.whispererText.innerText = "Iniciando análisis de la partida...";
         this.analyzeNextMoveInGame();
@@ -326,6 +328,7 @@ class GrandmasterWhisperer {
             this.analysisResults[this.currentIndex + 1] = this.currentEval;
             if (this.currentBestPV && this.currentBestPV.length > 0) {
                 this.bestMoves[this.currentIndex + 1] = this.currentBestPV[0];
+                this.bestPVs[this.currentIndex + 1] = this.currentBestPV;
             }
 
             // Detect blunder during analysis and show msg, then continue after delay
@@ -641,19 +644,31 @@ class GrandmasterWhisperer {
     }
 
     async handleHintYes() {
-        if (this.isShowingHint || this.currentBestPV.length === 0) return;
+        const pvMoves = this.bestPVs ? this.bestPVs[this.currentIndex] : null;
+        if (this.isShowingHint || !pvMoves || pvMoves.length === 0) return;
 
         this.isShowingHint = true;
         this.hintReturnIndex = this.currentIndex;
         this.hintContainer.style.display = 'none';
 
-        // Play up to 3 moves of the PV temporarily
-        const pvMoves = this.currentBestPV.slice(0, 3);
-        const tempGame = new Chess(this.game.fen());
+        // 1. Revert to position BEFORE the blunder
+        const beforeBlunderIndex = this.currentIndex - 1;
+        const tempGame = new Chess();
+        const baseHistory = [];
+        for (let i = 0; i <= beforeBlunderIndex; i++) {
+            tempGame.move(this.history[i].san);
+            baseHistory.push(this.history[i]);
+        }
+
+        // Show the board before the mistake briefly
+        this._renderGameState(tempGame, baseHistory);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 2. Play up to 3 moves of the CORRECT PV on the reverted board
         const tempHistory = [];
         const sanMoves = [];
 
-        for (const uciMove of pvMoves) {
+        for (const uciMove of pvMoves.slice(0, 3)) {
             const from = uciMove.substring(0, 2);
             const to = uciMove.substring(2, 4);
             const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
@@ -663,14 +678,17 @@ class GrandmasterWhisperer {
                     tempHistory.push(result);
                     sanMoves.push(result.san);
                 }
-            } catch (e) {}
+            } catch (e) {
+                break;
+            }
         }
 
-        this.say(`Variante sugerida: ${sanMoves.map(san => this._sanToSpanish(san)).join(' → ')}.`);
+        this.say(`Variante recomendada: ${sanMoves.map(san => this._sanToSpanish(san)).join(' → ')}.`);
 
-        // Animate the moves on the board
-        const animGame = new Chess(this.game.fen());
-        const animHistory = [];
+        // 3. Animate the correct sequence
+        const animGame = new Chess();
+        const animHistory = [...baseHistory];
+        for (let i = 0; i <= beforeBlunderIndex; i++) animGame.move(this.history[i].san);
         
         for (let i = 0; i < tempHistory.length; i++) {
             await new Promise(resolve => setTimeout(resolve, 800));
