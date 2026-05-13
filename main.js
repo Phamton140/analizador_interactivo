@@ -866,8 +866,8 @@ class GrandmasterWhisperer {
         if (!topEl || !bottomEl) return;
 
         const headers = this.game.header();
-        const white = headers.White || "Anonimo";
-        const black = headers.Black || "Anonimo";
+        const white = (headers.White && headers.White !== '?') ? headers.White : "Anonimo";
+        const black = (headers.Black && headers.Black !== '?') ? headers.Black : "Anonimo";
         const result = headers.Result || "*";
 
         let whiteLabel = `⬜ ${white}`;
