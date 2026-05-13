@@ -855,6 +855,33 @@ class GrandmasterWhisperer {
                 this.boardElement.appendChild(square);
             });
         });
+        
+        this.updatePlayerLabels();
+    }
+
+    updatePlayerLabels() {
+        const topEl = document.getElementById('player-top');
+        const bottomEl = document.getElementById('player-bottom');
+        if (!topEl || !bottomEl) return;
+
+        const headers = this.game.header();
+        const white = headers.White || "Anonimo";
+        const black = headers.Black || "Anonimo";
+        const result = headers.Result || "*";
+
+        let whiteLabel = `⬜ ${white}`;
+        let blackLabel = `⬛ ${black}`;
+
+        if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
+        if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
+
+        if (this.isFlipped) {
+            topEl.innerHTML = whiteLabel;
+            bottomEl.innerHTML = blackLabel;
+        } else {
+            topEl.innerHTML = blackLabel;
+            bottomEl.innerHTML = whiteLabel;
+        }
     }
 
     handleSquareClick(square) {
@@ -1076,6 +1103,12 @@ class GrandmasterWhisperer {
         const btnCancel = document.getElementById('modal-cancel');
         
         modal.style.display = 'flex';
+        
+        // Reset inputs to current game state
+        const headers = this.game.header();
+        document.getElementById('meta-white').value = headers.White || "";
+        document.getElementById('meta-black').value = headers.Black || "";
+        document.getElementById('meta-result').value = headers.Result || "*";
 
         const saveHandler = () => {
             const white = document.getElementById('meta-white').value || "Anonimo";
@@ -1098,7 +1131,9 @@ class GrandmasterWhisperer {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Estudio_OrdoMagnus_${date}.pgn`;
+            // Add unique timestamp to filename
+            const ts = new Date().getTime().toString().slice(-4);
+            a.download = `Estudio_OrdoMagnus_${date}_${ts}.pgn`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

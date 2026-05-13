@@ -109,10 +109,36 @@ main {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  border: 8px solid var(--secondary-bg);
+  border: 12px solid var(--secondary-bg);
   box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
   border-radius: 8px;
   overflow: hidden;
+  position: relative;
+}
+
+.player-label {
+  position: absolute;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.player-top { top: -35px; left: 0; }
+.player-bottom { bottom: -35px; left: 0; }
+
+.trophy {
+  color: var(--accent-gold);
+  margin-left: 4px;
+}
+
+.modal-field select option {
+  background-color: #1a1a1a;
+  color: white;
 }
 
 .square {
