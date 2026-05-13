@@ -942,9 +942,9 @@ class GrandmasterWhisperer {
 
         const headers = this.game.header();
         
-        let white = headers.White || headers.white || this.forcedWhite || "Anonimo";
-        let black = headers.Black || headers.black || this.forcedBlack || "Anonimo";
-        const result = headers.Result || headers.result || this.forcedResult || "*";
+        let white = (headers.White && headers.White !== '?') ? headers.White : (headers.white && headers.white !== '?' ? headers.white : (this.forcedWhite || "Anonimo"));
+        let black = (headers.Black && headers.Black !== '?') ? headers.Black : (headers.black && headers.black !== '?' ? headers.black : (this.forcedBlack || "Anonimo"));
+        let result = headers.Result || headers.result || this.forcedResult || "*";
 
         if (white === '?' || !white) white = "Anonimo";
         if (black === '?' || !black) black = "Anonimo";
