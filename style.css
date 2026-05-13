@@ -142,10 +142,24 @@ main {
 .avatar-container {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
-  border: 2px solid var(--accent-gold);
-  overflow: hidden;
-  background-color: var(--primary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-container.talking img {
+  animation: talking-wobble 0.8s infinite alternate ease-in-out, talking-glow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes talking-wobble {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.05) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes talking-glow {
+  0% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+  100% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.8); }
 }
 
 .avatar-container img {

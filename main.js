@@ -461,6 +461,18 @@ class GrandmasterWhisperer {
         const userMissed   = opponentBlundered && diff >  50;  // user also lost cp
 
         // ── MATE THREAT ────────────────────────────────────────────────────────
+        if (this.game.in_checkmate && this.game.in_checkmate()) {
+            const mateMsgs = [
+                "¡Jaque Mate! Fue un gusto analizar esta partida contigo. ¿Te animas a cargar otra?",
+                "¡Jaque Mate! Una partida muy interesante. Estoy listo cuando quieras analizar la siguiente.",
+                "¡Jaque Mate! Gran desenlace. Si quieres analizamos otra partida, ¡solo cárgala!"
+            ];
+            const msg = mateMsgs[Math.floor(Math.random() * mateMsgs.length)];
+            this.say(msg, "HAPPY", this.isAutoPlaying);
+            this.hintContainer.style.display = 'none';
+            return;
+        }
+
         if (isMate) {
             const msgText = this.personality.getMessageForMove(
                 this.currentIndex,
@@ -937,6 +949,7 @@ class GrandmasterWhisperer {
     say(text, mood = 'NEUTRAL', speak = false) {
         this.whispererText.innerText = text;
         const bubble = document.querySelector('.speech-bubble');
+        const avatar = document.querySelector('.avatar-container');
         bubble.classList.remove('pulse');
         void bubble.offsetWidth;
         bubble.classList.add('pulse');
@@ -945,13 +958,16 @@ class GrandmasterWhisperer {
         
         if (speak && window.speechSynthesis) {
             const autoState = this.isAutoPlaying;
+            if (avatar) avatar.classList.add('talking');
             this.personality.speak(text, () => {
+                if (avatar) avatar.classList.remove('talking');
                 if (autoState && this.isAutoPlaying) {
                     this.nextAutoStep();
                 }
             });
         } else {
             if (window.speechSynthesis) window.speechSynthesis.cancel();
+            if (avatar) avatar.classList.remove('talking');
             if (this.isAutoPlaying) {
                 const waitTime = Math.max(1500, text.length * 40);
                 this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), waitTime);
