@@ -289,11 +289,13 @@ main {
 }
 
 .move-header {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--accent-gold);
   text-transform: uppercase;
-  padding: 8px 4px;
+  padding: 12px 4px;
+  min-height: 40px;
+  line-height: 1.2;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   text-align: center;
   overflow: hidden;
