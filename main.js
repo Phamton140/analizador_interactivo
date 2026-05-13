@@ -361,6 +361,15 @@ class GrandmasterWhisperer {
     }
 
     _provideInteractiveCommentary() {
+        // If we are replaying a move we already prompted a hint for, just advance silently
+        if (this.lastHintIndex === this.currentIndex) {
+            this.hintContainer.style.display = 'none';
+            if (this.isAutoPlaying) {
+                this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 1000);
+            }
+            return;
+        }
+
         const actualMove = this.history[this.currentIndex];
         if (!actualMove) return;
 
