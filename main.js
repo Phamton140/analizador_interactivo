@@ -301,11 +301,15 @@ class GrandmasterWhisperer {
                     const whiteMatch = pgn.match(/\[White\s*"(.*?)"\]/i);
                     const blackMatch = pgn.match(/\[Black\s*"(.*?)"\]/i);
                     const resultMatch = pgn.match(/\[Result\s*"(.*?)"\]/i);
+                    const roundMatch = pgn.match(/\[Round\s*"(.*?)"\]/i);
                     
                     if (whiteMatch) this.game.header('White', whiteMatch[1]);
                     if (blackMatch) this.game.header('Black', blackMatch[1]);
                     if (resultMatch) this.game.header('Result', resultMatch[1]);
-                    console.log(`Reconstruction succeeded with ${movesCount} moves. White: ${whiteMatch?.[1]}, Black: ${blackMatch?.[1]}`);
+                    if (roundMatch) this.game.header('Round', roundMatch[1]);
+                    
+                    console.log(`Reconstruction succeeded with ${movesCount} moves.`);
+                    console.log("Headers injected:", this.game.header());
                 }
             }
 
