@@ -105,12 +105,13 @@ class GrandmasterWhisperer {
      * Key signals: 'N' = knight (Spanish uses 'C'), 'Q' = queen (Spanish uses 'D').
      */
     isPgnInEnglish(pgn) {
-        // Remove headers and comments before checking
-        const moveSection = pgn
-            .replace(/\[[^\]]*\]/g, '')
-            .replace(/\{[^}]*\}/g, '');
-        // N or Q followed by a square/capture = English piece notation
-        return /\b[NQ][a-h1-8x]/.test(moveSection);
+        // Lichess or Chess.com headers are always English
+        if (pgn.includes('lichess.org') || pgn.includes('chess.com')) return true;
+        
+        const moveSection = pgn.replace(/\[[^\]]*\]/g, '').replace(/\{[^}]*\}/g, '');
+        // English pieces: N (Knight), Q (Queen), B (Bishop), K (King)
+        // Note: R (Rook) is ambiguous as it means Rey in Spanish.
+        return /\b[NQBK][a-h1-8x]/.test(moveSection);
     }
 
     translatePgnToEnglish(pgn) {
@@ -260,10 +261,16 @@ class GrandmasterWhisperer {
         pgn = this.translatePgnToEnglish(pgn);
         try {
             this.personality._msgCache = {};
-            this.game.loadPgn(pgn);
+            const success = this.game.loadPgn(pgn);
+            if (!success) {
+                console.error("Chess.js failed to load PGN:", pgn);
+                this.say("El formato del PGN es inválido para el motor de ajedrez.", "NEUTRAL", false);
+                return;
+            }
             this.history = this.game.history({ verbose: true });
             if (this.history.length === 0) {
                 this.whispererText.innerText = "Esta partida no tiene jugadas para analizar.";
+                this.renderBoard(); // Update names even if no moves
                 return;
             }
             this.renderMovesList();
