@@ -739,10 +739,9 @@ class GrandmasterWhisperer {
 
         const highlightSquares = new Set();
         if (highlightMoves.length > 0) {
-            highlightMoves.forEach(m => {
-                highlightSquares.add(m.from);
-                highlightSquares.add(m.to);
-            });
+            const lastMove = highlightMoves[highlightMoves.length - 1];
+            highlightSquares.add(lastMove.from);
+            highlightSquares.add(lastMove.to);
         }
 
         displayRanks.forEach((rank, rIdx) => {
