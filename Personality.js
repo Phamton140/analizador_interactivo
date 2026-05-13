@@ -119,24 +119,24 @@ const OPENING_BOOK = {
 // Message pools per category — deterministic by moveIndex to avoid repeats
 const MESSAGES = {
     BLUNDER_OWN: [
-        "¡Un error catastrófico! Has perdido muchísima ventaja.",
-        "Una equivocación garrafal. Esta jugada compromete totalmente la partida.",
+        "¡Un error catastrófico! Has perdido muchísima ventaja aquí.",
+        "Una equivocación garrafal. Esta jugada compromete seriamente la partida.",
         "Error muy grave. Regalaste el control absoluto de la posición."
     ],
     BLUNDER_OPP: [
-        "¡El rival cometió un error catastrófico!",
-        "¡Un error garrafal del oponente! La partida se inclina fuertemente.",
-        "¡Vaya descuido catastrófico del rival!"
+        "¡El rival cometió un error catastrófico! Tienes una oportunidad de oro.",
+        "¡Vaya descuido del oponente! Esta es tu oportunidad de sentenciar.",
+        "¡Error fatal del rival! No lo dejes pasar, castígalo."
     ],
     MISTAKE_OWN: [
         "Has cometido un error importante aquí.",
-        "Esta jugada es un claro error posicional o táctico.",
-        "Fallo considerable. Había opciones mejores."
+        "Esta jugada es un fallo táctico. Había opciones mucho mejores.",
+        "Fallo considerable. Te has dejado una ventaja valiosa."
     ],
     MISTAKE_OPP: [
-        "El oponente ha cometido un error claro.",
-        "Un fallo evidente del rival que puedes aprovechar.",
-        "El oponente se equivocó."
+        "¡El oponente se equivocó! Esta jugada es un error que debes aprovechar.",
+        "Un fallo evidente del rival. Es el momento de tomar la iniciativa.",
+        "El oponente ha cometido una imprecisión grave. ¡Aprovéchalo!"
     ],
     INACCURACY_OWN: [
         "Una jugada un poco imprecisa.",

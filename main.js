@@ -260,6 +260,7 @@ class GrandmasterWhisperer {
                 return;
             }
             this.renderMovesList();
+            this.renderBoard();
             this.accuracyReport.style.display = 'none';
             this.startFullAnalysis();
         } catch (e) {
