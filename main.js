@@ -297,15 +297,15 @@ class GrandmasterWhisperer {
                 
                 if (movesCount > 0) {
                     success = true;
-                    // Manually restore critical headers from original string
-                    const whiteMatch = pgn.match(/\[White\s+"(.*?)"\]/i);
-                    const blackMatch = pgn.match(/\[Black\s+"(.*?)"\]/i);
-                    const resultMatch = pgn.match(/\[Result\s+"(.*?)"\]/i);
+                    // Manually restore critical headers from original string with more flexible regex
+                    const whiteMatch = pgn.match(/\[White\s*"(.*?)"\]/i);
+                    const blackMatch = pgn.match(/\[Black\s*"(.*?)"\]/i);
+                    const resultMatch = pgn.match(/\[Result\s*"(.*?)"\]/i);
                     
                     if (whiteMatch) this.game.header('White', whiteMatch[1]);
                     if (blackMatch) this.game.header('Black', blackMatch[1]);
                     if (resultMatch) this.game.header('Result', resultMatch[1]);
-                    console.log(`Reconstruction succeeded with ${movesCount} moves.`);
+                    console.log(`Reconstruction succeeded with ${movesCount} moves. White: ${whiteMatch?.[1]}, Black: ${blackMatch?.[1]}`);
                 }
             }
 
