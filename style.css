@@ -83,7 +83,7 @@ main {
 }
 
 .game-container {
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -95,7 +95,7 @@ main {
 .board-wrapper {
   position: relative;
   width: 100%;
-  max-width: min(88vh, 900px);
+  max-width: min(78vh, 850px);
   aspect-ratio: 1;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
