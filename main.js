@@ -1107,14 +1107,16 @@ class GrandmasterWhisperer {
         
         // Reset inputs to current game state
         const headers = this.game.header();
-        document.getElementById('meta-white').value = headers.White || "";
-        document.getElementById('meta-black').value = headers.Black || "";
+        document.getElementById('meta-white').value = headers.White && headers.White !== '?' ? headers.White : "";
+        document.getElementById('meta-black').value = headers.Black && headers.Black !== '?' ? headers.Black : "";
         document.getElementById('meta-result').value = headers.Result || "*";
+        document.getElementById('meta-round').value = headers.Round && headers.Round !== '?' ? headers.Round : "";
 
         const saveHandler = () => {
             const white = document.getElementById('meta-white').value || "Anonimo";
             const black = document.getElementById('meta-black').value || "Anonimo";
             const result = document.getElementById('meta-result').value || "*";
+            const round = document.getElementById('meta-round').value || "?";
             const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
 
             // Set headers in chess.js
@@ -1124,7 +1126,8 @@ class GrandmasterWhisperer {
                 'Date', date,
                 'White', white,
                 'Black', black,
-                'Result', result
+                'Result', result,
+                'Round', round
             );
 
             const pgn = this.game.pgn();
@@ -1141,6 +1144,7 @@ class GrandmasterWhisperer {
             URL.revokeObjectURL(url);
             
             modal.style.display = 'none';
+            this.renderBoard(); // Refresh labels with new names/trophies
             this.say("Partida exportada correctamente.", "HAPPY", false);
             cleanup();
         };
