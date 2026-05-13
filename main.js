@@ -856,6 +856,33 @@ class GrandmasterWhisperer {
                 this.boardElement.appendChild(square);
             });
         });
+        
+        this.updatePlayerLabels();
+    }
+
+    updatePlayerLabels() {
+        const topEl = document.getElementById('player-top');
+        const bottomEl = document.getElementById('player-bottom');
+        if (!topEl || !bottomEl) return;
+
+        const headers = this.game.header();
+        const white = headers.White || "Anonimo";
+        const black = headers.Black || "Anonimo";
+        const result = headers.Result || "*";
+
+        let whiteLabel = `⬜ ${white}`;
+        let blackLabel = `⬛ ${black}`;
+
+        if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
+        if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
+
+        if (this.isFlipped) {
+            topEl.innerHTML = whiteLabel;
+            bottomEl.innerHTML = blackLabel;
+        } else {
+            topEl.innerHTML = blackLabel;
+            bottomEl.innerHTML = whiteLabel;
+        }
     }
 
     handleSquareClick(square) {
@@ -921,27 +948,6 @@ class GrandmasterWhisperer {
 
     renderMovesList() {
         this.movesListElement.innerHTML = '';
-        
-        const headers = this.game.header();
-        const whiteName = headers.White && headers.White !== "Anonimo" ? headers.White : "";
-        const blackName = headers.Black && headers.Black !== "Anonimo" ? headers.Black : "";
-
-        if (whiteName || blackName) {
-            const emptyH = document.createElement('div');
-            emptyH.className = 'move-header';
-            this.movesListElement.appendChild(emptyH);
-
-            const whiteH = document.createElement('div');
-            whiteH.className = 'move-header';
-            whiteH.innerText = whiteName;
-            this.movesListElement.appendChild(whiteH);
-
-            const blackH = document.createElement('div');
-            blackH.className = 'move-header';
-            blackH.innerText = blackName;
-            this.movesListElement.appendChild(blackH);
-        }
-
         for (let i = 0; i < this.history.length; i += 2) {
             const num = Math.floor(i / 2) + 1;
             const numEl = document.createElement('div');
