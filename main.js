@@ -255,22 +255,49 @@ class GrandmasterWhisperer {
 
     loadGame(index) {
         let pgn = this.allGames[index];
-        // 1. Strip Arena engine comments and forfeit annotations
-        pgn = this.cleanArenaAnnotations(pgn);
-        // 2. Translate Spanish notation to English for chess.js
-        pgn = this.translatePgnToEnglish(pgn);
+        if (!pgn) return;
+
+        // 1. Normalize line endings and sanitize headers
+        pgn = pgn.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        pgn = pgn.replace(/\[Round "-"\]/g, '[Round "?"]');
+
+        // 2. Identify if it needs translation
+        const isEnglish = this.isPgnInEnglish(pgn);
+        
+        if (!isEnglish) {
+            pgn = this.cleanArenaAnnotations(pgn);
+            pgn = this.translatePgnToEnglish(pgn);
+        } else {
+            // For English PGNs (Lichess/Chess.com), we only ensure proper spacing
+            // but keep annotations {} as chess.js handles them better than our scanner
+            const parts = pgn.split(/\n\n/);
+            if (parts.length >= 2) {
+                const headers = parts[0];
+                const moves = parts.slice(1).join('\n\n').trim();
+                pgn = headers + '\n\n' + moves;
+            }
+        }
+
         try {
             this.personality._msgCache = {};
-            const success = this.game.loadPgn(pgn);
+            // Try loading. If it fails, try a desperate "no-headers" load if it's a single game
+            let success = this.game.loadPgn(pgn);
+            
+            if (!success && !pgn.includes('[Event ')) {
+                // Try prepending a default header if missing
+                success = this.game.loadPgn(`[Event "Imported"]\n\n${pgn}`);
+            }
+
             if (!success) {
-                console.error("Chess.js failed to load PGN:", pgn);
-                this.say("El formato del PGN es inválido para el motor de ajedrez.", "NEUTRAL", false);
+                console.error("Chess.js failed to load PGN. Content:", pgn);
+                this.say("El formato del PGN tiene errores técnicos que impiden su carga.", "NEUTRAL", false);
                 return;
             }
+
             this.history = this.game.history({ verbose: true });
             if (this.history.length === 0) {
                 this.whispererText.innerText = "Esta partida no tiene jugadas para analizar.";
-                this.renderBoard(); // Update names even if no moves
+                this.renderBoard();
                 return;
             }
             this.renderMovesList();
