@@ -91,6 +91,33 @@ h1 {
   font-size: 0.8rem;
   color: var(--text-muted);
   min-width: 100px;
+  text-align: right;
+}
+
+.desktop-only {
+  display: none !important;
+}
+
+@media (min-width: 951px) {
+  .desktop-only {
+    display: block !important;
+  }
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+.header-actions .lichess-search-area {
+    border-top: none;
+    padding: 0;
+    margin-right: 1.5rem;
+    position: relative;
+}
+
+.header-actions .search-box input {
+    height: 32px;
+    width: 180px;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 main {

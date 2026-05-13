@@ -22,9 +22,9 @@ class GrandmasterWhisperer {
         this.btnHintYes = document.getElementById('btn-hint-yes');
         this.btnHintNo = document.getElementById('btn-hint-no');
         this.evalFill = document.getElementById('eval-fill');
-        this.lichessUsernameInput = document.getElementById('lichess-username');
-        this.btnFetchLichess = document.getElementById('btn-fetch-lichess');
-        this.lichessStatus = document.getElementById('lichess-status');
+        this.lichessInputs = document.querySelectorAll('.lichess-username-input');
+        this.btnFetchLichessList = document.querySelectorAll('.btn-fetch-lichess');
+        this.lichessStatusList = document.querySelectorAll('.lichess-status');
 
         this.history = [];
         this.currentIndex = -1;
@@ -79,10 +79,11 @@ class GrandmasterWhisperer {
         });
 
         document.getElementById('btn-export-pgn').addEventListener('click', () => this.exportPgn());
-        this.btnFetchLichess.addEventListener('click', () => this.fetchLichessGames());
-        this.lichessUsernameInput.addEventListener('keypress', (e) => {
+        
+        this.btnFetchLichessList.forEach(btn => btn.addEventListener('click', () => this.fetchLichessGames()));
+        this.lichessInputs.forEach(input => input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.fetchLichessGames();
-        });
+        }));
     }
 
     initEngine() {
@@ -301,14 +302,17 @@ class GrandmasterWhisperer {
     }
 
     async fetchLichessGames() {
-        const username = this.lichessUsernameInput.value.trim();
+        // Try to get username from any input that has content
+        let username = "";
+        this.lichessInputs.forEach(input => { if (input.value.trim()) username = input.value.trim(); });
+
         if (!username) {
             this.setLichessStatus('Por favor ingresa un usuario', 'error');
             return;
         }
 
         this.setLichessStatus('Buscando partidas...', 'loading');
-        this.btnFetchLichess.disabled = true;
+        this.btnFetchLichessList.forEach(btn => btn.disabled = true);
 
         try {
             // Fetch latest 30 games of Classic, Rapid and Blitz
@@ -328,6 +332,9 @@ class GrandmasterWhisperer {
                 throw new Error('No se encontraron partidas recientes (Blitz/Rapid/Clásico)');
             }
 
+            // Sync all inputs with the found username
+            this.lichessInputs.forEach(input => input.value = username);
+
             this.pgnInput.value = pgnData;
             this.processInput(true);
             
@@ -338,13 +345,20 @@ class GrandmasterWhisperer {
             console.error('Lichess fetch error:', error);
             this.setLichessStatus(error.message, 'error');
         } finally {
-            this.btnFetchLichess.disabled = false;
+            this.btnFetchLichessList.forEach(btn => btn.disabled = false);
         }
     }
 
     setLichessStatus(text, type) {
-        this.lichessStatus.innerText = text;
-        this.lichessStatus.className = 'search-status ' + (type ? 'status-' + type : '');
+        this.lichessStatusList.forEach(statusEl => {
+            statusEl.innerText = text;
+            statusEl.className = 'lichess-status search-status ' + (type ? 'status-' + type : '');
+        });
+        
+        // Also fallback to trainer text if on desktop (where sidebar status might be hidden)
+        if (type === 'error') {
+            this.say(text, 'SAD');
+        }
     }
 
     loadGame(index) {

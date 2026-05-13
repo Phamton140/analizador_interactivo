@@ -22,6 +22,13 @@
             <h1>Analizador Interactivo - Ordo Magnus</h1>
         </div>
         <div class="header-actions">
+            <div class="lichess-search-area desktop-only">
+                <div class="search-box">
+                    <input type="text" class="lichess-username-input" placeholder="Usuario de Lichess">
+                    <button class="btn-fetch-lichess trainer-btn primary-gold">Buscar</button>
+                </div>
+                <div class="lichess-status search-status" style="margin-top: 0; position: absolute; top: 35px; right: 120px; font-size: 0.6rem;"></div>
+            </div>
             <span id="engine-status">Motor: Listo</span>
         </div>
     </header>
@@ -113,13 +120,13 @@
                 </div>
             </div>
 
-            <div class="lichess-search-area">
+            <div class="lichess-search-area mobile-only">
                 <p>🔍 Buscar partidas en Lichess</p>
                 <div class="search-box">
-                    <input type="text" id="lichess-username" placeholder="Usuario de Lichess">
-                    <button id="btn-fetch-lichess" class="trainer-btn primary-gold">Buscar</button>
+                    <input type="text" class="lichess-username-input" placeholder="Usuario de Lichess">
+                    <button class="btn-fetch-lichess trainer-btn primary-gold">Buscar</button>
                 </div>
-                <div id="lichess-status" class="search-status"></div>
+                <div class="lichess-status search-status"></div>
             </div>
 
             <div class="pgn-input-area">
