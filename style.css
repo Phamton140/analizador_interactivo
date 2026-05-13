@@ -83,7 +83,7 @@ main {
 }
 
 .game-container {
-  padding: 3rem 1rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -95,7 +95,7 @@ main {
 .board-wrapper {
   position: relative;
   width: 100%;
-  max-width: min(78vh, 800px);
+  max-width: min(70vh, 800px);
   aspect-ratio: 1;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
@@ -208,7 +208,7 @@ main {
 }
 
 .whisperer-card {
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.02);
   flex-shrink: 0;
@@ -222,8 +222,8 @@ main {
 }
 
 .avatar-container {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
