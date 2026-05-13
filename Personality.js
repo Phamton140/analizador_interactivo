@@ -119,32 +119,34 @@ const OPENING_BOOK = {
 // Message pools per category — deterministic by moveIndex to avoid repeats
 const MESSAGES = {
     BLUNDER_OWN: [
-        "Error crítico. El motor identifica una pérdida de ventaja significativa.",
-        "Jugada imprecisa. Esta posición era ganadora; era importante mantener la presión.",
-        "Tácticamente comprometido. El rival tiene una respuesta contundente aquí.",
-        "Pérdida de material o posición. El análisis señala una variante superior.",
-        "Esta jugada cede la iniciativa. Revisar la variante del motor es clave."
+        "¡Un error catastrófico! Has perdido muchísima ventaja.",
+        "Una equivocación garrafal. Esta jugada compromete totalmente la partida.",
+        "Error muy grave. Regalaste el control absoluto de la posición."
     ],
     BLUNDER_OPP: [
-        "¡Error del rival! Se abre una ventaja táctica que hay que capitalizar.",
-        "¡Excelente oportunidad! El oponente ha cometido un error decisivo.",
-        "El rival cedió material. Una respuesta precisa consolida la ventaja.",
-        "Jugada inexacta del oponente. El motor muestra una ganancia concreta aquí.",
-        "¡Ventaja táctica! El rival no encontró la jugada correcta en esta posición."
+        "¡El rival cometió un error catastrófico!",
+        "¡Un error garrafal del oponente! La partida se inclina fuertemente.",
+        "¡Vaya descuido catastrófico del rival!"
+    ],
+    MISTAKE_OWN: [
+        "Has cometido un error importante aquí.",
+        "Esta jugada es un claro error posicional o táctico.",
+        "Fallo considerable. Había opciones mejores."
+    ],
+    MISTAKE_OPP: [
+        "El oponente ha cometido un error claro.",
+        "Un fallo evidente del rival que puedes aprovechar.",
+        "El oponente se equivocó."
     ],
     INACCURACY_OWN: [
-        "Jugada subóptima. Existía una continuación más precisa en esta posición.",
-        "Imprecisión moderada. La ventaja se redujo ligeramente.",
-        "El motor señala una idea superior. Vale la pena estudiar la variante.",
-        "Potencial desaprovechado. Había una jugada más activa disponible.",
-        "Jugada aceptable, pero no la más fuerte. El análisis lo detalla."
+        "Una jugada un poco imprecisa.",
+        "Se podía jugar con mayor precisión.",
+        "Una imprecisión posicional."
     ],
     INACCURACY_OPP: [
-        "El oponente no encontró la mejor jugada. La posición favorece tu bando.",
-        "Imprecisión del rival. Mantén la presión y no le des respiro.",
-        "El rival cedió la iniciativa. Aprovecha el tempo ganado.",
-        "Oportunidad creada por un error menor del oponente. Actúa con precisión.",
-        "El rival jugó de forma pasiva. Toma el control del juego."
+        "El oponente jugó de forma imprecisa.",
+        "Una leve imprecisión del rival.",
+        "Una jugada dudosa del oponente."
     ],
     BRILLIANT: [
         "¡Jugada excepcional! Coincide con la primera opción de Stockfish.",
@@ -273,6 +275,7 @@ export class PersonalityEngine {
         if (category === 'MATE_OWN')       pool = MESSAGES.MATE_FOUND_OWN;
         else if (category === 'MATE_OPP')  pool = MESSAGES.MATE_FOUND_OPP;
         else if (category === 'BLUNDER')   pool = isOpponent ? MESSAGES.BLUNDER_OPP   : MESSAGES.BLUNDER_OWN;
+        else if (category === 'MISTAKE')   pool = isOpponent ? MESSAGES.MISTAKE_OPP   : MESSAGES.MISTAKE_OWN;
         else if (category === 'INACCURACY')pool = isOpponent ? MESSAGES.INACCURACY_OPP : MESSAGES.INACCURACY_OWN;
         else if (category === 'BRILLIANT') pool = MESSAGES.BRILLIANT;
         else if (category === 'OPENING')   pool = MESSAGES.OPENING;
@@ -314,9 +317,9 @@ export class PersonalityEngine {
         }
 
         // Move quality based on diff (centipawn loss for the side that moved)
-        if (diff > 300) return { mood: 'ANGRY', category: 'BLUNDER', isOpponent: !isUserSide, openingName, isMate: false };
-        if (diff > 100) return { mood: 'SURPRISED', category: 'INACCURACY', isOpponent: !isUserSide, openingName, isMate: false };
-        if (diff < -80) return { mood: 'HAPPY', category: 'BRILLIANT', isOpponent: !isUserSide, openingName, isMate: false };
+        if (diff >= 150) return { mood: 'ANGRY', category: 'BLUNDER', isOpponent: !isUserSide, openingName, isMate: false };
+        if (diff >= 100) return { mood: 'SURPRISED', category: 'MISTAKE', isOpponent: !isUserSide, openingName, isMate: false };
+        if (diff >= 70)  return { mood: 'NEUTRAL', category: 'INACCURACY', isOpponent: !isUserSide, openingName, isMate: false };
         if (isOpening) return { mood: 'NEUTRAL', category: 'OPENING', isOpponent: false, openingName, isMate: false };
         return { mood: 'NEUTRAL', category: 'NEUTRAL', isOpponent: false, openingName, isMate: false };
     }

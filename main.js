@@ -343,7 +343,8 @@ class GrandmasterWhisperer {
                     if (diff > 250) {
                         const analysis = this.personality.analyzeMove(diff, this.currentEval, side, false, this.history.slice(0, this.currentIndex + 1), this.currentIndex);
                         const msgText = this.personality.getMessageForMove(this.currentIndex, analysis.category, analysis.isOpponent);
-                        this.say(`J${this.currentIndex + 1}: ${msgText}`, analysis.mood, false);
+                        const currentFullMove = Math.floor(this.currentIndex / 2) + 1;
+                        this.say(`Jugada ${currentFullMove} (${side === 'w' ? 'Blancas' : 'Negras'}): ${msgText}`, analysis.mood, false);
                         setTimeout(() => this.analyzeNextMoveInGame(), 800);
                         return;
                     }
@@ -351,7 +352,10 @@ class GrandmasterWhisperer {
             }
             
             // Force UI update for progress text by yielding to browser render thread
-            this.whispererText.innerText = `Analizando... jugada ${this.currentIndex + 1} de ${this.history.length}.`;
+            const currentFullMove = Math.floor(this.currentIndex / 2) + 1;
+            const totalFullMoves = Math.ceil(this.history.length / 2);
+            const sideStr = this.history[this.currentIndex]?.color === 'w' ? 'Blancas' : 'Negras';
+            this.whispererText.innerText = `Analizando... jugada ${currentFullMove} de ${totalFullMoves} (${sideStr}).`;
             setTimeout(() => this.analyzeNextMoveInGame(), 10);
             return;
         }
@@ -393,10 +397,11 @@ class GrandmasterWhisperer {
         );
 
         const isBlunder = analysis.category === 'BLUNDER';
+        const isMistake = analysis.category === 'MISTAKE';
         const isInaccuracy = analysis.category === 'INACCURACY';
         const isBrilliant = analysis.category === 'BRILLIANT';
         const isMate = analysis.isMate;
-        const isError = isBlunder || isInaccuracy;
+        const isError = isBlunder || isMistake || isInaccuracy;
 
         // ── OPENING PHASE: only announce opening name ──────────────────────────
         if (isOpening) {
@@ -465,7 +470,7 @@ class GrandmasterWhisperer {
             
             // If they played well during a mate, praise them instead of prompting
             if (!isError && !userMissed && analysis.category === 'MATE_OWN') {
-                this.say("¡Excelente! Encontraste una jugada fuerte que mantiene la red de mate.", "HAPPY", this.isAutoPlaying);
+                this.say("Mantiene la red de mate.", "HAPPY", this.isAutoPlaying);
                 this.hintContainer.style.display = 'none';
             } else {
                 this.say(msgText, analysis.mood, this.isAutoPlaying);
@@ -491,8 +496,10 @@ class GrandmasterWhisperer {
                 this.currentIndex, analysis.category, analysis.isOpponent
             );
             
-            if (analysis.isOpponent) {
-                this.lastOpponentErrorIndex = this.currentIndex;
+            if (analysis.isOpponent || isInaccuracy) {
+                if (analysis.isOpponent && !isInaccuracy) {
+                    this.lastOpponentErrorIndex = this.currentIndex;
+                }
                 this.say(msgText, analysis.mood, this.isAutoPlaying);
                 this.hintContainer.style.display = 'none';
             } else {
