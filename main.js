@@ -274,13 +274,29 @@ class GrandmasterWhisperer {
             // Attempt 1: Full load
             let success = this.game.loadPgn(pgn);
             
-            // Attempt 2: Desperate fallback - Load moves only, then restore headers
+            // Attempt 2: Manual Reconstruction - Load moves one by one
             if (!success) {
-                console.warn("Initial PGN load failed, trying resilient fallback...");
-                const movesOnly = pgn.replace(/\[[^\]]*\]/g, '').trim();
-                success = this.game.loadPgn(movesOnly);
+                console.warn("Standard PGN load failed, trying manual reconstruction...");
+                this.game.reset();
                 
-                if (success) {
+                // Strip headers and comments
+                const movesText = pgn.replace(/\[[^\]]*\]/g, '').replace(/\{[^}]*\}/g, '').replace(/\([^)]*\)/g, '').trim();
+                // Tokenize moves, skipping move numbers (e.g., 1., 1..., 2.)
+                const tokens = movesText.split(/\s+/).filter(t => t.length > 0 && !/^\d+\.?(\.\.)?$/.test(t));
+                
+                let movesCount = 0;
+                for (const token of tokens) {
+                    if (['1-0', '0-1', '1/2-1/2', '*'].includes(token)) break;
+                    const result = this.game.move(token);
+                    if (!result) {
+                        console.warn(`Manual move failed at token: "${token}" at position ${movesCount}`);
+                        break; 
+                    }
+                    movesCount++;
+                }
+                
+                if (movesCount > 0) {
+                    success = true;
                     // Manually restore critical headers from original string
                     const whiteMatch = pgn.match(/\[White\s+"(.*?)"\]/i);
                     const blackMatch = pgn.match(/\[Black\s+"(.*?)"\]/i);
@@ -289,13 +305,13 @@ class GrandmasterWhisperer {
                     if (whiteMatch) this.game.header('White', whiteMatch[1]);
                     if (blackMatch) this.game.header('Black', blackMatch[1]);
                     if (resultMatch) this.game.header('Result', resultMatch[1]);
-                    console.log("Resilient fallback succeeded. Headers restored manually.");
+                    console.log(`Reconstruction succeeded with ${movesCount} moves.`);
                 }
             }
 
             if (!success) {
-                console.error("Chess.js failed all PGN load attempts. Content:", pgn);
-                this.say("El formato del PGN tiene errores técnicos que impiden su carga.", "NEUTRAL", false);
+                console.error("All PGN load attempts failed.");
+                this.say("El formato del PGN es incompatible. Asegúrate de que las jugadas sean válidas.", "NEUTRAL", false);
                 return;
             }
 
