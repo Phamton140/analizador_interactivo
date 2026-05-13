@@ -257,39 +257,44 @@ class GrandmasterWhisperer {
         let pgn = this.allGames[index];
         if (!pgn) return;
 
-        // 1. Normalize line endings and sanitize headers
-        pgn = pgn.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        // 1. Normalize and basic sanitization
+        pgn = pgn.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
         pgn = pgn.replace(/\[Round "-"\]/g, '[Round "?"]');
 
         // 2. Identify if it needs translation
         const isEnglish = this.isPgnInEnglish(pgn);
-        
         if (!isEnglish) {
             pgn = this.cleanArenaAnnotations(pgn);
             pgn = this.translatePgnToEnglish(pgn);
-        } else {
-            // For English PGNs (Lichess/Chess.com), we only ensure proper spacing
-            // but keep annotations {} as chess.js handles them better than our scanner
-            const parts = pgn.split(/\n\n/);
-            if (parts.length >= 2) {
-                const headers = parts[0];
-                const moves = parts.slice(1).join('\n\n').trim();
-                pgn = headers + '\n\n' + moves;
-            }
         }
 
         try {
             this.personality._msgCache = {};
-            // Try loading. If it fails, try a desperate "no-headers" load if it's a single game
+            
+            // Attempt 1: Full load
             let success = this.game.loadPgn(pgn);
             
-            if (!success && !pgn.includes('[Event ')) {
-                // Try prepending a default header if missing
-                success = this.game.loadPgn(`[Event "Imported"]\n\n${pgn}`);
+            // Attempt 2: Desperate fallback - Load moves only, then restore headers
+            if (!success) {
+                console.warn("Initial PGN load failed, trying resilient fallback...");
+                const movesOnly = pgn.replace(/\[[^\]]*\]/g, '').trim();
+                success = this.game.loadPgn(movesOnly);
+                
+                if (success) {
+                    // Manually restore critical headers from original string
+                    const whiteMatch = pgn.match(/\[White\s+"(.*?)"\]/i);
+                    const blackMatch = pgn.match(/\[Black\s+"(.*?)"\]/i);
+                    const resultMatch = pgn.match(/\[Result\s+"(.*?)"\]/i);
+                    
+                    if (whiteMatch) this.game.header('White', whiteMatch[1]);
+                    if (blackMatch) this.game.header('Black', blackMatch[1]);
+                    if (resultMatch) this.game.header('Result', resultMatch[1]);
+                    console.log("Resilient fallback succeeded. Headers restored manually.");
+                }
             }
 
             if (!success) {
-                console.error("Chess.js failed to load PGN. Content:", pgn);
+                console.error("Chess.js failed all PGN load attempts. Content:", pgn);
                 this.say("El formato del PGN tiene errores técnicos que impiden su carga.", "NEUTRAL", false);
                 return;
             }
