@@ -7,10 +7,12 @@
 ## 🚀 Características Principales
 
 * **Análisis Total de la Partida:** Carga un archivo PGN o introduce tus movimientos. El sistema evalúa instantáneamente toda la partida y genera un reporte de precisión (basado en la pérdida de centipeones).
+* **Carga de PGN Ultra-Resiliente:** Incorpora un motor de **Reconstrucción Manual de Jugadas** capaz de procesar archivos PGN complejos provenientes de plataformas como **Chess.com y Lichess**, incluso si contienen etiquetas no estándar o errores de formato que otros analizadores rechazarían.
+* **Identidad Visual Persistente:** Etiquetas de jugadores minimalistas y transparentes integradas directamente en el tablero. El sistema gestiona identidades de forma persistente, manteniendo los nombres reales y los **trofeos de victoria (con resplandor dorado)** visibles incluso durante los intensos ciclos de re-análisis del motor.
 * **Diccionario de Aperturas Offline Dinámico:** Reconoce decenas de aperturas y variantes (Ej: Defensa Siciliana, Variante Najdorf) mediante un árbol de prefijos exhaustivo integrado, sin requerir metadata de plataformas externas.
-* **Alertas Pedagógicas Animadas:** Si el jugador se equivoca, el motor interrumpe sutilmente el flujo mediante un *overlay* difuminado. Si el usuario decide ver la recomendación de la máquina, se anima secuencialmente la variante en el tablero. Tras 3 segundos de reflexión, el análisis automático se reanuda por sí solo.
-* **Retroalimentación Auditiva Avanzada:** Integración con la `Web Speech API` para locutar comentarios humanos ("Blunder", "Oportunidad perdida", felicitaciones si la jugada iguala a la de Stockfish) y narrar movimientos con notación algebraica en español ("Caballo por de cuatro").
-* **Interfaz de Alta Calidad (UI/UX):** Tablero estilizado, transiciones, medidor de ventaja dinámico (Barra de evaluación) y sincronización con el historial de jugadas.
+* **Alertas Pedagógicas Animadas:** Si el jugador se equivoca, el motor interrumpe sutilmente el flujo mediante un *overlay* difuminado. El análisis se enfoca específicamente en **explotar los errores del oponente**, animando las variantes ganadoras. Tras 3 segundos de reflexión, el análisis automático se reanuda por sí solo.
+* **Gestión de Metadatos en Tiempo Real:** Modal de exportación PGN mejorado que permite editar Evento, Sitio, Ronda y Resultado, reflejando cualquier cambio (incluyendo el ganador del trofeo) instantáneamente en la interfaz del tablero.
+* **Retroalimentación Auditiva Avanzada:** Integración con la `Web Speech API` para locutar comentarios humanos y narrar movimientos con notación algebraica en español ("Caballo por de cuatro").
 
 ---
 
@@ -20,10 +22,10 @@ El proyecto fue construido priorizando rendimiento, ejecución local (cliente pu
 
 * **HTML5 / CSS3 Vanilla:** Maquetación moderna basada en CSS Grid/Flexbox y variables nativas para un control de temas y *glassmorphism* eficiente.
 * **JavaScript (ES6 Modules):** Arquitectura limpia orientada a objetos (separación de la lógica de interfaz, motor de ajedrez, y el módulo de personalidad "Whisperer").
-* **[chess.js](https://github.com/jhlywa/chess.js):** Librería subyacente para la validación estricta de movimientos legales, control de turnos, generación de cadenas FEN y SAN.
-* **[Stockfish.js](https://github.com/nmrugg/stockfish.js/) (WebAssembly):** Versión compilada en WASM del motor de ajedrez más potente del mundo. Corre en un *Web Worker* secundario para no bloquear el hilo principal de la interfaz gráfica. Se optimizó el flujo de comandos UCI para evitar colisiones durante la reanudación del autoanálisis.
-* **Web Speech API:** Interfaz nativa del navegador para la síntesis de voz interactiva sin latencia de red ni requerir servidores backend.
-* **Vite:** Herramienta de construcción (bundler) ligera y ultrarrápida usada para el entorno de desarrollo local.
+* **[chess.js](https://github.com/jhlywa/chess.js):** Librería subyacente para la validación estricta de movimientos legales y control de turnos.
+* **[Stockfish.js](https://github.com/nmrugg/stockfish.js/) (WebAssembly):** Motor de ajedrez en WASM corriendo en un *Web Worker* secundario para un análisis de alto rendimiento sin bloqueos de interfaz.
+* **Web Speech API:** Interfaz nativa del navegador para la síntesis de voz interactiva.
+* **Vite:** Entorno de desarrollo y construcción ligero y ultrarrápido.
 
 ---
 
@@ -31,7 +33,7 @@ El proyecto fue construido priorizando rendimiento, ejecución local (cliente pu
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/TU_USUARIO/analizador_interactivo.git
+   git clone https://github.com/Phamton140/analizador_interactivo.git
    cd analizador_interactivo
    ```
 2. Instala las dependencias (Vite):
@@ -48,7 +50,7 @@ El proyecto fue construido priorizando rendimiento, ejecución local (cliente pu
 
 ## 🔧 Detalles Técnicos (Engine Management)
 
-Para asegurar la estabilidad del hilo de WebAssembly (`stockfish.wasm`), la aplicación maneja una estricta orquestación de comandos UCI. Se previenen las "Race Conditions" (errores como `Uncaught RuntimeError: unreachable`) asegurando que el motor de inferencia reciba las peticiones de `stop`, `position fen` y `go depth` en el orden y momento idóneos, particularmente durante la reanudación asíncrona post-alertas pedagógicas.
+Para asegurar la estabilidad del hilo de WebAssembly (`stockfish.wasm`), la aplicación maneja una estricta orquestación de comandos UCI. El sistema de carga resiliente asegura que la metadata de los jugadores (`White`, `Black`, `Result`) se preserve en una memoria de reserva interna, permitiendo que la interfaz se mantenga informativa y coherente incluso cuando el motor interno se reinicia para evaluar nuevas posiciones.
 
 ---
 *Diseñado con el propósito de revolucionar la enseñanza interactiva y fluida en el ajedrez moderno.*
