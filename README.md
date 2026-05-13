@@ -12,6 +12,7 @@
 * **Diccionario de Aperturas Offline Dinámico:** Reconoce decenas de aperturas y variantes (Ej: Defensa Siciliana, Variante Najdorf) mediante un árbol de prefijos exhaustivo integrado, sin requerir metadata de plataformas externas.
 * **Alertas Pedagógicas Animadas:** Si el jugador se equivoca, el motor interrumpe sutilmente el flujo mediante un *overlay* difuminado. El análisis se enfoca específicamente en **explotar los errores del oponente**, animando las variantes ganadoras. Tras 3 segundos de reflexión, el análisis automático se reanuda por sí solo.
 * **Gestión de Metadatos en Tiempo Real:** Modal de exportación PGN mejorado que permite editar Evento, Sitio, Ronda y Resultado, reflejando cualquier cambio (incluyendo el ganador del trofeo) instantáneamente en la interfaz del tablero.
+* **Diseño Responsivo y Experiencia de App:** Interfaz adaptativa optimizada para PC, tablets y teléfonos móviles. Implementa comportamientos de **"Native App"** (bloqueo de selección, respuesta táctil premium, sin scroll innecesario) para una experiencia fluida en cualquier dispositivo.
 * **Retroalimentación Auditiva Avanzada:** Integración con la `Web Speech API` para locutar comentarios humanos y narrar movimientos con notación algebraica en español ("Caballo por de cuatro").
 
 ---

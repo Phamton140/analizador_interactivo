@@ -175,6 +175,8 @@ class GrandmasterWhisperer {
         }
 
         const hasAnyTag = content.includes('[');
+        const hasEventTag = content.includes('[Event ');
+
         if (!hasAnyTag) {
             if (!content.endsWith('*') && !force) return;
             content = this.translatePgnToEnglish(content);
@@ -187,11 +189,19 @@ class GrandmasterWhisperer {
             });
             content = pgnFormatted;
         } else {
-            // Ensure first game has [Event] tag if it has other tags
-            if (!content.trim().startsWith('[Event ')) {
+            content = this.translatePgnToEnglish(content);
+            // If [Event ] exists but is not at the very start, move it to the front
+            // to ensure correct splitting and header parsing
+            if (hasEventTag && !content.trim().startsWith('[Event ')) {
+                const eventMatch = content.match(/\[Event\s*"(.*?)"\]/);
+                if (eventMatch) {
+                    const fullTag = eventMatch[0];
+                    content = content.replace(fullTag, '').trim();
+                    content = `${fullTag}\n${content}`;
+                }
+            } else if (!hasEventTag) {
                 content = `[Event "Estudio Ordo Magnus"]\n${content}`;
             }
-            content = this.translatePgnToEnglish(content);
         }
 
         const allRaw = content.split(/(?=\[Event )/).filter(g => g.trim() !== "");
@@ -230,6 +240,7 @@ class GrandmasterWhisperer {
         this.lastHintIndex = -1;
         this.isShowingHint = false;
         this.wasAutoPlaying = false;
+        this.hasAnnouncedMateSequence = false;
         this.renderBoard();
         this.renderMovesList();
         this.updateEvalBar(0);
@@ -548,7 +559,9 @@ class GrandmasterWhisperer {
         const userMissed   = opponentBlundered && diff >  50;  // user also lost cp
 
         // ── MATE THREAT ────────────────────────────────────────────────────────
-        if (this.game.in_checkmate && this.game.in_checkmate()) {
+        // ── ACTUAL CHECKMATE ON BOARD ──────────────────────────────────────────
+        if (this.game.isCheckmate && this.game.isCheckmate()) {
+            this.hasAnnouncedMateSequence = false; // Reset for future games
             const mateMsgs = [
                 "¡Jaque Mate! Fue un gusto analizar esta partida contigo. ¿Te animas a cargar otra?",
                 "¡Jaque Mate! Una partida muy interesante. Estoy listo cuando quieras analizar la siguiente.",
@@ -561,21 +574,32 @@ class GrandmasterWhisperer {
         }
 
         if (isMate) {
-            const msgText = this.personality.getMessageForMove(
-                this.currentIndex,
-                analysis.category === 'MATE_OWN' ? 'MATE_OWN' : 'MATE_OPP',
-                analysis.isOpponent
-            );
-            
-            // If they played well during a mate, praise them instead of prompting
-            if (!isError && !userMissed && analysis.category === 'MATE_OWN') {
-                this.say("Mantiene la red de mate.", "HAPPY", this.isAutoPlaying);
-                this.hintContainer.style.display = 'none';
-            } else {
+            // Only announce the mate sequence once per sequence
+            if (!this.hasAnnouncedMateSequence) {
+                const msgText = this.personality.getMessageForMove(
+                    this.currentIndex,
+                    analysis.category === 'MATE_OWN' ? 'MATE_OWN' : 'MATE_OPP',
+                    analysis.isOpponent
+                );
                 this.say(msgText, analysis.mood, this.isAutoPlaying);
-                this.promptHint();
+                this.hasAnnouncedMateSequence = true;
+                
+                if (analysis.category !== 'MATE_OWN' || isError || userMissed) {
+                    this.promptHint();
+                } else {
+                    this.hintContainer.style.display = 'none';
+                }
+            } else {
+                // Already announced, just proceed silently or with a very minor update
+                this.hintContainer.style.display = 'none';
+                if (this.isAutoPlaying) {
+                    this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), 1000);
+                }
             }
             return;
+        } else {
+            // No mate score anymore, reset the flag for future sequences
+            this.hasAnnouncedMateSequence = false;
         }
 
         // ── BEST ENGINE MOVE ───────────────────────────────────────────────────
@@ -957,8 +981,8 @@ class GrandmasterWhisperer {
         let whiteLabel = `⬜ ${white}`;
         let blackLabel = `⬛ ${black}`;
 
-        if (result === '1-0') whiteLabel += ' <span class="trophy" style="margin-left: 5px; filter: drop-shadow(0 0 2px gold);">🏆</span>';
-        if (result === '0-1') blackLabel += ' <span class="trophy" style="margin-left: 5px; filter: drop-shadow(0 0 2px gold);">🏆</span>';
+        if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
+        if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
 
         if (this.isFlipped) {
             topEl.innerHTML = whiteLabel;

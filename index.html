@@ -2,9 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Analizador Interactivo - Ordo Magnus</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>♟️</text></svg>">
     <meta name="description" content="Analiza tus partidas de ajedrez con sabiduría táctica y humor caribeño. Stockfish local gratis para siempre.">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -16,31 +21,31 @@
             <div class="logo-icon">O</div>
             <h1>Analizador Interactivo - Ordo Magnus</h1>
         </div>
-        <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
-            <span id="engine-status" style="font-size: 0.8rem; color: var(--text-muted); min-width: 100px;">Motor: Listo</span>
+        <div class="header-actions">
+            <span id="engine-status">Motor: Listo</span>
         </div>
     </header>
 
     <main>
         <section class="game-container">
-            <div class="board-layout-container" style="display: flex; gap: 1.5rem; align-items: center; justify-content: center; position: relative; margin: auto; max-height: 100%; padding: 1.5rem 0;">
-                <div class="evaluation-bar-wrapper" style="display: flex; align-items: center; position: relative; height: 100%;">
-                    <div id="eval-value" style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; font-weight: bold; color: var(--accent-gold); width: 40px; text-align: center;">0.0</div>
+            <div class="board-layout-container">
+                <div class="evaluation-bar-wrapper">
+                    <div id="eval-value">0.0</div>
                     <div class="evaluation-bar">
                         <div id="eval-fill" class="eval-fill" style="height: 50%;"></div>
                     </div>
                 </div>
                 
-                <div class="board-wrapper" style="position: relative; border-radius: 8px;">
+                <div class="board-wrapper">
                     <div id="player-top" class="player-label player-top"></div>
                     <div id="chessboard"></div>
                     <div id="player-bottom" class="player-label player-bottom"></div>
-                    <div id="hint-container" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(3px);">
-                        <div style="background: var(--secondary-bg); border: 2px solid var(--accent-purple); padding: 1.5rem; border-radius: 8px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-                            <h3 id="hint-msg" style="color: white; margin-bottom: 1rem; font-size: 1.1rem;">¿Ver sugerencia del módulo?</h3>
-                            <div style="display: flex; gap: 1rem; justify-content: center;">
-                                <button id="btn-hint-yes" class="primary" style="background: var(--success); padding: 0.5rem 1.5rem; font-size: 0.9rem; border-radius: 6px;">Sí</button>
-                                <button id="btn-hint-no" class="primary" style="background: var(--danger); padding: 0.5rem 1.5rem; font-size: 0.9rem; border-radius: 6px;">Continuar</button>
+                    <div id="hint-container" class="hint-overlay">
+                        <div class="hint-box">
+                            <h3 id="hint-msg">¿Ver sugerencia del módulo?</h3>
+                            <div class="hint-actions">
+                                <button id="btn-hint-yes" class="primary">Sí</button>
+                                <button id="btn-hint-no" class="primary danger">Continuar</button>
                             </div>
                         </div>
                     </div>
@@ -49,21 +54,21 @@
         </section>
 
         <aside class="analysis-sidebar">
-            <div id="game-selector-container" style="display: none; background: var(--primary-bg); padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label for="game-select" style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap;">Partida:</label>
-                    <select id="game-select" style="flex: 1; background: var(--secondary-bg); color: white; border: 1px solid var(--accent-gold); border-radius: 4px; padding: 2px 4px; font-size: 0.75rem;"></select>
+            <div id="game-selector-container" class="game-selector-panel">
+                <div class="selector-content">
+                    <label for="game-select">Partida:</label>
+                    <select id="game-select"></select>
                 </div>
             </div>
 
             <div class="whisperer-card">
-                <div class="perspective-selector" style="margin-bottom: 0.5rem; display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                <div class="perspective-selector">
                     <button id="perspective-white" class="trainer-btn active">⚪ Blancas</button>
                     <button id="perspective-black" class="trainer-btn">⚫ Negras</button>
                 </div>
                 <div class="whisperer-header">
-                    <div class="avatar-container" style="width: 100px; height: 100px; position: relative; background: transparent; border: none;">
-                        <img id="whisperer-avatar" src="robot_avatar.png" alt="Ordo Magnus" style="border-radius: 50%; box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); width: 100%; height: 100%; object-fit: cover;">
+                    <div class="avatar-container">
+                        <img id="whisperer-avatar" src="robot_avatar.png" alt="Ordo Magnus">
                         <div class="voice-waves">
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
@@ -76,44 +81,44 @@
                         <h2 id="trainer-name" style="font-size: 0.9rem;">Ordo Magnus</h2>
                     </div>
                 </div>
-                <div class="speech-bubble" style="padding: 0.5rem; font-size: 0.8rem;">
+                <div class="speech-bubble">
                     <p id="whisperer-text">¡Listo para analizar!</p>
                 </div>
             </div>
 
-            <div class="game-controls" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0.4rem 0.75rem;">
-                <div class="board-controls" style="margin-bottom: 0.5rem; display: flex; gap: 0.3rem; align-items: center; justify-content: center;">
-                    <button id="btn-first" title="Inicio" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">|&lt;</button>
-                    <button id="btn-prev" title="Anterior" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&lt;</button>
-                    <button id="btn-autoplay" class="primary" title="Auto" style="padding: 0.25rem 0.6rem; font-size: 0.7rem;">▶ Auto</button>
-                    <button id="btn-next" title="Siguiente" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&gt;</button>
-                    <button id="btn-last" title="Final" style="padding: 0.25rem 0.4rem; font-size: 0.7rem;">&gt;|</button>
-                    <button id="btn-flip" title="Girar" style="padding: 0.25rem 0.4rem; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-gold);"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+            <div class="game-controls">
+                <div class="board-controls">
+                    <button id="btn-first" title="Inicio">|&lt;</button>
+                    <button id="btn-prev" title="Anterior">&lt;</button>
+                    <button id="btn-autoplay" class="primary" title="Auto">▶ Auto</button>
+                    <button id="btn-next" title="Siguiente">&gt;</button>
+                    <button id="btn-last" title="Final">&gt;|</button>
+                    <button id="btn-flip" title="Girar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="gold-svg"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
                     </button>
                 </div>
 
-                <div class="moves-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                    <h3 style="margin-bottom: 0.25rem; font-size: 0.8rem; color: var(--accent-gold);">Lista de Jugadas</h3>
-                    <div id="moves-list" class="moves-list" style="flex: 1; overflow-y: auto;">
+                <div class="moves-container">
+                    <h3>Lista de Jugadas</h3>
+                    <div id="moves-list" class="moves-list">
                         <!-- Moves will be injected here -->
                     </div>
                 </div>
 
-                <div id="accuracy-report" class="accuracy-container" style="display: none; margin-top: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
-                    <div style="display: flex; justify-content: space-around; font-size: 0.8rem; font-weight: bold;">
-                        <div id="acc-white" style="background: white; color: black; padding: 0.3rem 0.8rem; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">⬜ --%</div>
-                        <div id="acc-black" style="background: #2a2a2a; color: white; padding: 0.3rem 0.8rem; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">⬛ --%</div>
+                <div id="accuracy-report" class="accuracy-container">
+                    <div class="accuracy-summary">
+                        <div id="acc-white" class="acc-badge white-acc">⬜ --%</div>
+                        <div id="acc-black" class="acc-badge black-acc">⬛ --%</div>
                     </div>
                 </div>
             </div>
 
-            <div class="pgn-input-area" style="flex-shrink: 0; background: rgba(255,255,255,0.02); padding: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                <p style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.3rem;">📋 Pega tu PGN o escribe jugadas (termina con *)</p>
+            <div class="pgn-input-area">
+                <p>📋 Pega tu PGN o escribe jugadas (termina con *)</p>
                 <textarea id="pgn-input" placeholder="1. e4 e5 2. Nf3..."></textarea>
-                <div style="margin-top: 0.4rem; display: flex; gap: 0.4rem;">
-                    <button id="btn-nav-upload" class="trainer-btn" style="flex: 1;">📂 Cargar PGN</button>
-                    <button id="btn-export-pgn" class="trainer-btn" style="flex: 1; background: var(--accent-gold); color: var(--primary-bg);">📥 Guardar PGN</button>
+                <div class="pgn-actions">
+                    <button id="btn-nav-upload" class="trainer-btn">📂 Cargar PGN</button>
+                    <button id="btn-export-pgn" class="trainer-btn primary-gold">📥 Guardar PGN</button>
                     <input type="file" id="pgn-file" accept=".pgn" style="display: none;">
                 </div>
             </div>
