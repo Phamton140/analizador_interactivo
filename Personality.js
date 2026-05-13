@@ -218,6 +218,14 @@ export class PersonalityEngine {
         this.lastOpeningName = "";
         // Cache: moveIndex -> message to avoid repeats when revisiting
         this._msgCache = {};
+
+        // Pre-load voices for browsers that don't load them immediately
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
     }
 
     setAnalysisSide(side) {
@@ -339,12 +347,17 @@ export class PersonalityEngine {
         this._currentUtterance = utterance;
         
         utterance.lang = 'es-ES';
+        
+        // Better voice selection: prefer high quality local Microsoft voices if available
         const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('male'))
-                       || voices.find(v => v.lang.startsWith('es'));
+        let preferred = voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft') && v.name.toLowerCase().includes('helena'))
+                     || voices.find(v => v.lang.startsWith('es') && v.localService && v.name.toLowerCase().includes('microsoft'))
+                     || voices.find(v => v.lang.startsWith('es') && v.localService)
+                     || voices.find(v => v.lang.startsWith('es'));
+                     
         if (preferred) utterance.voice = preferred;
-        utterance.pitch = 0.85;
-        utterance.rate = 1.05;
+        utterance.pitch = 0.9;
+        utterance.rate = 1.0;
         
         if (onEndCallback) {
             utterance.onend = () => {
