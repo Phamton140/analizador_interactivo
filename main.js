@@ -308,8 +308,8 @@ class GrandmasterWhisperer {
                     if (resultMatch) this.game.header('Result', resultMatch[1]);
                     if (roundMatch) this.game.header('Round', roundMatch[1]);
                     
-                    console.log(`Reconstruction succeeded with ${movesCount} moves.`);
-                    console.log("Headers injected:", this.game.header());
+                    console.log(`Reconstruction succeeded. Moves: ${movesCount}`);
+                    this.updatePlayerLabels(); // Force update
                 }
             }
 
@@ -932,16 +932,17 @@ class GrandmasterWhisperer {
         if (!topEl || !bottomEl) return;
 
         const headers = this.game.header();
-        // Case-insensitive header check
-        const white = (headers.White || headers.white || "Anonimo").toString();
-        const black = (headers.Black || headers.black || "Anonimo").toString();
+        console.log("updatePlayerLabels headers:", headers);
+
+        let white = headers.White || headers.white || "Anonimo";
+        let black = headers.Black || headers.black || "Anonimo";
         const result = headers.Result || headers.result || "*";
 
-        const cleanWhite = (white === '?' || !white) ? "Anonimo" : white;
-        const cleanBlack = (black === '?' || !black) ? "Anonimo" : black;
+        if (white === '?') white = "Anonimo";
+        if (black === '?') black = "Anonimo";
 
-        let whiteLabel = `⬜ ${cleanWhite}`;
-        let blackLabel = `⬛ ${cleanBlack}`;
+        let whiteLabel = `⬜ ${white}`;
+        let blackLabel = `⬛ ${black}`;
 
         if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
         if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
