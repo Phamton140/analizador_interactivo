@@ -932,12 +932,16 @@ class GrandmasterWhisperer {
         if (!topEl || !bottomEl) return;
 
         const headers = this.game.header();
-        const white = (headers.White && headers.White !== '?') ? headers.White : "Anonimo";
-        const black = (headers.Black && headers.Black !== '?') ? headers.Black : "Anonimo";
-        const result = headers.Result || "*";
+        // Case-insensitive header check
+        const white = (headers.White || headers.white || "Anonimo").toString();
+        const black = (headers.Black || headers.black || "Anonimo").toString();
+        const result = headers.Result || headers.result || "*";
 
-        let whiteLabel = `⬜ ${white}`;
-        let blackLabel = `⬛ ${black}`;
+        const cleanWhite = (white === '?' || !white) ? "Anonimo" : white;
+        const cleanBlack = (black === '?' || !black) ? "Anonimo" : black;
+
+        let whiteLabel = `⬜ ${cleanWhite}`;
+        let blackLabel = `⬛ ${cleanBlack}`;
 
         if (result === '1-0') whiteLabel += ' <span class="trophy">🏆</span>';
         if (result === '0-1') blackLabel += ' <span class="trophy">🏆</span>';
