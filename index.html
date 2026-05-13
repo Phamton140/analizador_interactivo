@@ -118,6 +118,38 @@
         </aside>
     </main>
 
-    <script type="module" src="./main.js"></script>
+    <div id="export-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 style="color: var(--accent-gold); margin-bottom: 0.5rem;">Registrar Partida</h3>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.5rem;">Personaliza los datos de tu estudio antes de descargar.</p>
+            
+            <div class="modal-field">
+                <label>Jugador Blancas</label>
+                <input type="text" id="meta-white" placeholder="Anonimo">
+            </div>
+            
+            <div class="modal-field">
+                <label>Jugador Negras</label>
+                <input type="text" id="meta-black" placeholder="Anonimo">
+            </div>
+            
+            <div class="modal-field">
+                <label>Resultado</label>
+                <select id="meta-result">
+                    <option value="*">* (En curso/Desconocido)</option>
+                    <option value="1-0">1-0 (Ganan Blancas)</option>
+                    <option value="0-1">0-1 (Ganan Negras)</option>
+                    <option value="1/2-1/2">1/2-1/2 (Tablas)</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions" style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button id="modal-cancel" class="trainer-btn" style="flex: 1;">Cancelar</button>
+                <button id="modal-save" class="trainer-btn primary" style="flex: 1; background: var(--accent-gold); color: var(--primary-bg);">Guardar y Descargar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
 </body>
 </html>

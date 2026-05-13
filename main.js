@@ -95,7 +95,7 @@ class GrandmasterWhisperer {
         const reader = new FileReader();
         reader.onload = (event) => {
             this.pgnInput.value = event.target.result;
-            this.processInput();
+            this.processInput(true); // Force processing for files
         };
         reader.readAsText(file);
     }
@@ -159,20 +159,23 @@ class GrandmasterWhisperer {
      */
     gameHasMoves(pgn) {
         const cleaned = this.cleanArenaAnnotations(pgn);
-        // After headers, check if there is a move (starts with digit + dot or a piece letter)
         const moveSection = cleaned.replace(/\[[^\]]*\]/g, '').trim();
-        // A real move token: "1." or "e4" or piece move
         return /[1-9]\d*\.\s*[a-hA-Z]/.test(moveSection);
     }
 
-    processInput() {
+    processInput(force = false) {
         let content = this.pgnInput.value.trim();
         if (!content) { this.resetBoard(); return; }
 
+        // Auto-append * if missing and forced (e.g. for files without result tags)
+        if (force && !content.includes('[Event') && !content.endsWith('*')) {
+            content += ' *';
+            this.pgnInput.value = content;
+        }
+
         const isStandard = content.includes('[Event');
         if (!isStandard) {
-            // Manual input: only trigger on * at end
-            if (!content.endsWith('*')) return;
+            if (!content.endsWith('*') && !force) return;
             content = this.translatePgnToEnglish(content);
             const rawGames = content.split('@').filter(g => g.trim() !== "");
             let pgnFormatted = "";
@@ -183,15 +186,12 @@ class GrandmasterWhisperer {
             });
             content = pgnFormatted;
         } else {
-            // Arena / standard PGN: only parse when at least one game result is present
-            // This prevents chess.js errors while the user is still pasting
             const hasResult = /\b(1-0|0-1|1\/2-1\/2|\*)\s*$/.test(content) ||
                               /\b(1-0|0-1|1\/2-1\/2)/.test(content);
-            if (!hasResult) return;
+            if (!hasResult && !force) return;
             content = this.translatePgnToEnglish(content);
         }
 
-        // Split into individual games and filter out empty/forfeit ones
         const allRaw = content.split(/(?=\[Event )/).filter(g => g.trim() !== "");
         const games = allRaw.filter(g => this.gameHasMoves(g));
 
@@ -1061,33 +1061,56 @@ class GrandmasterWhisperer {
             return;
         }
         
-        const white = prompt("Nombre del jugador de blancas:", "Anonimo") || "Anonimo";
-        const black = prompt("Nombre del jugador de negras:", "Anonimo") || "Anonimo";
-        const result = prompt("Resultado (1-0, 0-1, 1/2-1/2, *):", this.game.header().Result || "*") || "*";
-        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
-
-        // Set headers in chess.js
-        this.game.header(
-            'Event', 'Estudio Ordo Magnus',
-            'Site', 'Academia Ordo Magnus',
-            'Date', date,
-            'White', white,
-            'Black', black,
-            'Result', result
-        );
-
-        const pgn = this.game.pgn();
-        const blob = new Blob([pgn], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Estudio_OrdoMagnus_${date}.pgn`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const modal = document.getElementById('export-modal');
+        const btnSave = document.getElementById('modal-save');
+        const btnCancel = document.getElementById('modal-cancel');
         
-        this.say("Partida exportada correctamente.", "HAPPY", false);
+        modal.style.display = 'flex';
+
+        const saveHandler = () => {
+            const white = document.getElementById('meta-white').value || "Anonimo";
+            const black = document.getElementById('meta-black').value || "Anonimo";
+            const result = document.getElementById('meta-result').value || "*";
+            const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+
+            // Set headers in chess.js
+            this.game.header(
+                'Event', 'Estudio Ordo Magnus',
+                'Site', 'Academia Ordo Magnus',
+                'Date', date,
+                'White', white,
+                'Black', black,
+                'Result', result
+            );
+
+            const pgn = this.game.pgn();
+            const blob = new Blob([pgn], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Estudio_OrdoMagnus_${date}.pgn`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            modal.style.display = 'none';
+            this.say("Partida exportada correctamente.", "HAPPY", false);
+            cleanup();
+        };
+
+        const cancelHandler = () => {
+            modal.style.display = 'none';
+            cleanup();
+        };
+
+        const cleanup = () => {
+            btnSave.removeEventListener('click', saveHandler);
+            btnCancel.removeEventListener('click', cancelHandler);
+        };
+
+        btnSave.addEventListener('click', saveHandler);
+        btnCancel.addEventListener('click', cancelHandler);
     }
 }
 
