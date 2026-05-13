@@ -1053,6 +1053,8 @@ class GrandmasterWhisperer {
                 this.autoPlayTimeout = setTimeout(() => this.nextAutoStep(), waitTime);
             }
         }
+    }
+
     exportPgn() {
         if (this.history.length === 0) {
             this.say("No hay jugadas para exportar.", "NEUTRAL", false);
