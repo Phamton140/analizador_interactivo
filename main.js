@@ -167,14 +167,14 @@ class GrandmasterWhisperer {
         let content = this.pgnInput.value.trim();
         if (!content) { this.resetBoard(); return; }
 
-        // Auto-append * if missing and forced (e.g. for files without result tags)
-        if (force && !content.includes('[Event') && !content.endsWith('*')) {
+        // Auto-append * if missing and forced
+        if (force && !content.includes('[') && !content.endsWith('*')) {
             content += ' *';
             this.pgnInput.value = content;
         }
 
-        const isStandard = content.includes('[Event');
-        if (!isStandard) {
+        const hasAnyTag = content.includes('[');
+        if (!hasAnyTag) {
             if (!content.endsWith('*') && !force) return;
             content = this.translatePgnToEnglish(content);
             const rawGames = content.split('@').filter(g => g.trim() !== "");
@@ -186,9 +186,10 @@ class GrandmasterWhisperer {
             });
             content = pgnFormatted;
         } else {
-            const hasResult = /\b(1-0|0-1|1\/2-1\/2|\*)\s*$/.test(content) ||
-                              /\b(1-0|0-1|1\/2-1\/2)/.test(content);
-            if (!hasResult && !force) return;
+            // Ensure first game has [Event] tag if it has other tags
+            if (!content.trim().startsWith('[Event ')) {
+                content = `[Event "Estudio Ordo Magnus"]\n${content}`;
+            }
             content = this.translatePgnToEnglish(content);
         }
 
@@ -196,7 +197,13 @@ class GrandmasterWhisperer {
         const games = allRaw.filter(g => this.gameHasMoves(g));
 
         if (games.length === 0) {
-            this.whispererText.innerText = "No se encontraron partidas con jugadas analizables en este archivo.";
+            // If we have tags but no moves detected yet, still try to load headers if possible
+            if (hasAnyTag && content.length > 20) {
+                try {
+                    this.game.loadPgn(content);
+                    this.renderBoard(); // Update labels (names/trophies)
+                } catch(e) {}
+            }
             return;
         }
 
